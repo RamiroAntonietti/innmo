@@ -1,0 +1,26 @@
+{
+  "name": "inmo-saas-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.98.0",
+    "axios": "^1.6.7",
+    "jspdf": "^2.5.1",
+    "lucide-vue-next": "^0.363.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.15",
+    "vue-router": "^4.3.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.3",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.12"
+  }
+}

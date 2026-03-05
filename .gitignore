@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment files (IMPORTANTE - nunca subir)
+.env
+.env.local
+.env.production
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Prisma generated client
+inmo-nest/backend/node_modules/
+inmo-vue/frontend/node_modules/
