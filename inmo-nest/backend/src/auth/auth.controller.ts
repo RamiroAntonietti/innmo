@@ -1,29 +1,25 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 import { JwtAuthGuard } from '../common/guards/auth.guard';
-import { CurrentUser, TenantId } from '../common/decorators/user.decorator';
-import { Public } from '../common/guards/auth.guard';
+import { CurrentUser } from '../common/decorators/user.decorator';
 
 @Controller('auth')
-@UseGuards(JwtAuthGuard)
 export class AuthController {
-  constructor(private auth: AuthService) {}
+  constructor(private svc: AuthService) {}
 
-  @Public()
   @Post('register')
-  register(@Body() dto: RegisterDto) {
-    return this.auth.register(dto);
-  }
+  register(@Body() dto: RegisterDto) { return this.svc.register(dto); }
 
-  @Public()
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+  login(@Body() dto: LoginDto, @Req() req: any) {
+    const ip = req.ip || req.headers['x-forwarded-for'];
+    return this.svc.login(dto, ip);
   }
 
   @Get('me')
-  me(@CurrentUser('sub') userId: string, @TenantId() tenantId: string) {
-    return this.auth.me(userId, tenantId);
+  @UseGuards(JwtAuthGuard)
+  me(@CurrentUser('sub') userId: string, @CurrentUser('tenantId') tenantId: string) {
+    return this.svc.me(userId, tenantId);
   }
 }

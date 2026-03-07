@@ -2,13 +2,14 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth.js';
 
 const routes = [
-  { path: '/login', component: () => import('../pages/auth/LoginPage.vue'), meta: { public: true } },
-  { path: '/registro', component: () => import('../pages/auth/RegisterPage.vue'), meta: { public: true } },
+  { path: '/', component: () => import('../pages/auth/LandingPage.vue'), meta: { public: true } },
+  { path: '/login', redirect: '/' },
+  { path: '/registro', redirect: '/' },
   {
-    path: '/',
+    path: '/app',
     component: () => import('../components/layout/Layout.vue'),
     children: [
-      { path: '', redirect: '/dashboard' },
+      { path: '', redirect: '/app/dashboard' },
       { path: 'dashboard', component: () => import('../pages/dashboard/DashboardPage.vue') },
       { path: 'clients', component: () => import('../pages/clients/ClientsPage.vue') },
       { path: 'properties', component: () => import('../pages/properties/PropertiesPage.vue') },
@@ -26,7 +27,7 @@ const routes = [
       { path: 'migracion', component: () => import('../pages/migracion/MigracionPage.vue'), meta: { roles: ['ADMIN'] } },
     ]
   },
-  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
+  { path: '/:pathMatch(.*)*', redirect: '/app/dashboard' },
 ];
 
 const router = createRouter({
@@ -36,9 +37,9 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore();
-  if (!to.meta.public && !auth.isAuthenticated) return '/login';
-  if (to.meta.public && auth.isAuthenticated) return '/dashboard';
-  if (to.meta.roles && !to.meta.roles.includes(auth.user?.rol)) return '/dashboard';
+  if (!to.meta.public && !auth.isAuthenticated) return '/';
+  if (to.meta.public && auth.isAuthenticated && to.path === '/') return '/app/dashboard';
+  if (to.meta.roles && !to.meta.roles.includes(auth.user?.rol)) return '/app/dashboard';
   return true;
 });
 

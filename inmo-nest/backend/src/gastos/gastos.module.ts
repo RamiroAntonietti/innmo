@@ -1,33 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { IsString, IsNumber, IsEnum, IsOptional, IsDateString, Min } from 'class-validator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../common/guards/auth.guard';
-import { TenantId } from '../common/decorators/user.decorator';
+import { RequirePlanModule, PlanGuard } from '../common/guards/plan.guard';
+import { TenantId, CurrentUser } from '../common/decorators/user.decorator';
+import { AuditModule } from '../audit/audit.module';
+import { PlansModule } from '../plans/plans.module';
 
-// ── Enums ──
-export enum TipoGasto {
-  REPARACION = 'REPARACION',
-  IMPUESTO = 'IMPUESTO',
-  EXPENSA = 'EXPENSA',
-  SEGURO = 'SEGURO',
-  SERVICIO = 'SERVICIO',
-  HONORARIO = 'HONORARIO',
-  OTRO = 'OTRO',
-}
+enum TipoGasto { REPARACION='REPARACION', IMPUESTO='IMPUESTO', EXPENSA='EXPENSA', SEGURO='SEGURO', SERVICIO='SERVICIO', HONORARIO='HONORARIO', OTRO='OTRO' }
+enum PagadoPor { PROPIETARIO='PROPIETARIO', INMOBILIARIA='INMOBILIARIA' }
 
-export enum PagadoPor {
-  PROPIETARIO = 'PROPIETARIO',
-  INMOBILIARIA = 'INMOBILIARIA',
-}
-
-// ── DTOs ──
 export class CreateGastoDto {
   @IsString() propiedadId: string;
   @IsEnum(TipoGasto) tipo: TipoGasto;
   @IsString() descripcion: string;
-  @IsNumber() @Min(0) monto: number;
+  @IsNumber() @Min(0.01) monto: number;
   @IsDateString() fecha: string;
   @IsEnum(PagadoPor) @IsOptional() pagadoPor?: PagadoPor;
   @IsString() @IsOptional() comprobante?: string;
@@ -36,184 +26,83 @@ export class CreateGastoDto {
 export class UpdateGastoDto {
   @IsEnum(TipoGasto) @IsOptional() tipo?: TipoGasto;
   @IsString() @IsOptional() descripcion?: string;
-  @IsNumber() @Min(0) @IsOptional() monto?: number;
+  @IsNumber() @IsOptional() @Min(0.01) monto?: number;
   @IsDateString() @IsOptional() fecha?: string;
   @IsEnum(PagadoPor) @IsOptional() pagadoPor?: PagadoPor;
   @IsString() @IsOptional() comprobante?: string;
 }
 
-// ── Service ──
 @Injectable()
 export class GastosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   async findAll(tenantId: string, query: any) {
-    const { propiedadId, tipo, pagadoPor, desde, hasta } = query;
+    const { propiedadId, tipo, page = 1, limit = 20 } = query;
     const where: any = { tenantId };
     if (propiedadId) where.propiedadId = propiedadId;
     if (tipo) where.tipo = tipo;
-    if (pagadoPor) where.pagadoPor = pagadoPor;
-    if (desde || hasta) {
-      where.fecha = {};
-      if (desde) where.fecha.gte = new Date(desde);
-      if (hasta) where.fecha.lte = new Date(hasta);
-    }
 
-    const gastos = await this.prisma.gastoPropiedad.findMany({
-      where,
-      include: { propiedad: { select: { titulo: true, direccion: true } } },
-      orderBy: { fecha: 'desc' },
-    });
-
-    const total = gastos.reduce((sum, g) => sum + Number(g.monto), 0);
-    return { data: gastos, total };
+    const [data, total] = await Promise.all([
+      this.prisma.gastoPropiedad.findMany({
+        where, skip: (Number(page)-1)*Number(limit), take: Number(limit),
+        include: { propiedad: { select: { titulo: true, direccion: true } } },
+        orderBy: { fecha: 'desc' },
+      }),
+      this.prisma.gastoPropiedad.count({ where }),
+    ]);
+    return { data, total, page: Number(page), limit: Number(limit) };
   }
 
-  async findByPropiedad(tenantId: string, propiedadId: string) {
-    const propiedad = await this.prisma.propiedad.findFirst({ where: { id: propiedadId, tenantId } });
+  async create(tenantId: string, dto: CreateGastoDto, usuarioId?: string) {
+    const propiedad = await this.prisma.propiedad.findFirst({ where: { id: dto.propiedadId, tenantId, deletedAt: null } });
     if (!propiedad) throw new NotFoundException('Propiedad no encontrada.');
 
-    // Gastos
-    const gastos = await this.prisma.gastoPropiedad.findMany({
-      where: { propiedadId, tenantId },
-      orderBy: { fecha: 'desc' },
+    const gasto = await this.prisma.gastoPropiedad.create({
+      data: { tenantId, propiedadId: dto.propiedadId, tipo: dto.tipo, descripcion: dto.descripcion, monto: dto.monto, fecha: new Date(dto.fecha), pagadoPor: dto.pagadoPor || 'PROPIETARIO', comprobante: dto.comprobante },
     });
 
-    // Ingresos (pagos cobrados de contratos activos de esta propiedad)
-    const pagos = await this.prisma.pagoAlquiler.findMany({
-      where: {
-        estado: 'PAGADO',
-        contrato: { propiedadId, tenantId },
-      },
-    });
-
-    const totalGastos = gastos.reduce((sum, g) => sum + Number(g.monto), 0);
-    const totalIngresos = pagos.reduce((sum, p) => sum + Number(p.montoPagado || p.monto), 0);
-    const rentabilidad = totalIngresos - totalGastos;
-    const rentabilidadPct = totalIngresos > 0
-      ? parseFloat(((rentabilidad / totalIngresos) * 100).toFixed(2))
-      : 0;
-
-    // Gastos por tipo
-    const porTipo = gastos.reduce((acc: any, g) => {
-      acc[g.tipo] = (acc[g.tipo] || 0) + Number(g.monto);
-      return acc;
-    }, {});
-
-    return {
-      propiedad,
-      gastos,
-      resumen: {
-        totalGastos,
-        totalIngresos,
-        rentabilidad,
-        rentabilidadPct,
-        porTipo,
-      },
-    };
+    await this.audit.log({ tenantId, usuarioId, accion: 'CREATE', entidad: 'gasto', entidadId: gasto.id, detalle: { tipo: dto.tipo, monto: dto.monto } });
+    return gasto;
   }
 
-  async create(tenantId: string, dto: CreateGastoDto) {
-    const propiedad = await this.prisma.propiedad.findFirst({ where: { id: dto.propiedadId, tenantId } });
-    if (!propiedad) throw new NotFoundException('Propiedad no encontrada.');
-
-    return this.prisma.gastoPropiedad.create({
-      data: {
-        tenantId,
-        propiedadId: dto.propiedadId,
-        tipo: dto.tipo,
-        descripcion: dto.descripcion,
-        monto: dto.monto,
-        fecha: new Date(dto.fecha),
-        pagadoPor: dto.pagadoPor || 'PROPIETARIO',
-        comprobante: dto.comprobante,
-      },
-      include: { propiedad: { select: { titulo: true } } },
-    });
-  }
-
-  async update(tenantId: string, id: string, dto: UpdateGastoDto) {
+  async update(tenantId: string, id: string, dto: UpdateGastoDto, usuarioId?: string) {
     const gasto = await this.prisma.gastoPropiedad.findFirst({ where: { id, tenantId } });
     if (!gasto) throw new NotFoundException('Gasto no encontrado.');
-
-    return this.prisma.gastoPropiedad.update({
-      where: { id },
-      data: {
-        ...dto,
-        fecha: dto.fecha ? new Date(dto.fecha) : undefined,
-      },
-    });
+    const updated = await this.prisma.gastoPropiedad.update({ where: { id }, data: { ...dto, fecha: dto.fecha ? new Date(dto.fecha) : undefined } });
+    await this.audit.log({ tenantId, usuarioId, accion: 'UPDATE', entidad: 'gasto', entidadId: id, detalle: dto });
+    return updated;
   }
 
-  async remove(tenantId: string, id: string) {
+  async remove(tenantId: string, id: string, usuarioId?: string) {
     const gasto = await this.prisma.gastoPropiedad.findFirst({ where: { id, tenantId } });
     if (!gasto) throw new NotFoundException('Gasto no encontrado.');
-    return this.prisma.gastoPropiedad.delete({ where: { id } });
-  }
-
-  async resumenGeneral(tenantId: string) {
-    // Gastos totales por propiedad con ingresos
-    const propiedades = await this.prisma.propiedad.findMany({
-      where: { tenantId },
-      select: {
-        id: true, titulo: true, direccion: true,
-        gastos: { select: { monto: true, tipo: true } },
-        contratos: {
-          select: {
-            pagos: {
-              where: { estado: 'PAGADO' },
-              select: { monto: true, montoPagado: true },
-            },
-          },
-        },
-      },
-    });
-
-    return propiedades.map(p => {
-      const totalGastos = p.gastos.reduce((s, g) => s + Number(g.monto), 0);
-      const totalIngresos = p.contratos.flatMap(c => c.pagos)
-        .reduce((s, pago) => s + Number(pago.montoPagado || pago.monto), 0);
-      const rentabilidad = totalIngresos - totalGastos;
-      return {
-        id: p.id,
-        titulo: p.titulo,
-        direccion: p.direccion,
-        totalGastos,
-        totalIngresos,
-        rentabilidad,
-        rentabilidadPct: totalIngresos > 0
-          ? parseFloat(((rentabilidad / totalIngresos) * 100).toFixed(2))
-          : 0,
-      };
-    });
+    await this.prisma.gastoPropiedad.delete({ where: { id } });
+    await this.audit.log({ tenantId, usuarioId, accion: 'DELETE', entidad: 'gasto', entidadId: id });
+    return { message: 'Gasto eliminado.' };
   }
 }
 
-// ── Controller ──
+// ── El controlador requiere módulo 'gastos' del plan ─────────────
 @Controller('gastos')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PlanGuard)
+@RequirePlanModule('gastos')
 export class GastosController {
   constructor(private svc: GastosService) {}
 
-  @Get()
-  findAll(@TenantId() tid: string, @Query() q: any) { return this.svc.findAll(tid, q); }
+  @Get() findAll(@TenantId() tid: string, @Query() q: any) { return this.svc.findAll(tid, q); }
 
-  @Get('resumen')
-  resumen(@TenantId() tid: string) { return this.svc.resumenGeneral(tid); }
+  @Post()
+  @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
+  create(@TenantId() tid: string, @Body() dto: CreateGastoDto, @CurrentUser('sub') uid: string) { return this.svc.create(tid, dto, uid); }
 
-  @Get('propiedad/:id')
-  byPropiedad(@TenantId() tid: string, @Param('id') id: string) { return this.svc.findByPropiedad(tid, id); }
+  @Put(':id')
+  @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
+  update(@TenantId() tid: string, @Param('id') id: string, @Body() dto: UpdateGastoDto, @CurrentUser('sub') uid: string) { return this.svc.update(tid, id, dto, uid); }
 
-  @Post() @Roles('ADMIN', 'AGENTE')
-  create(@TenantId() tid: string, @Body() dto: CreateGastoDto) { return this.svc.create(tid, dto); }
-
-  @Put(':id') @Roles('ADMIN', 'AGENTE')
-  update(@TenantId() tid: string, @Param('id') id: string, @Body() dto: UpdateGastoDto) { return this.svc.update(tid, id, dto); }
-
-  @Delete(':id') @Roles('ADMIN')
-  remove(@TenantId() tid: string, @Param('id') id: string) { return this.svc.remove(tid, id); }
+  @Delete(':id')
+  @UseGuards(RolesGuard) @Roles('ADMIN')
+  remove(@TenantId() tid: string, @Param('id') id: string, @CurrentUser('sub') uid: string) { return this.svc.remove(tid, id, uid); }
 }
 
-// ── Module ──
-@Module({ providers: [GastosService], controllers: [GastosController] })
+@Module({ imports: [AuditModule, PlansModule], providers: [GastosService], controllers: [GastosController] })
 export class GastosModule {}

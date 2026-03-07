@@ -11,36 +11,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── SUBSCRIPTION PLAN ───────────────────────
-model SubscriptionPlan {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  priceMonthly    Int      @map("price_monthly")
-  maxProperties   Int?     @map("max_properties")
-  maxUsers        Int?     @map("max_users")
-  enabledModules  Json     @map("enabled_modules")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  tenants         Tenant[]
-
-  @@map("subscription_plans")
-}
-
 // ─── TENANT (Inmobiliaria) ───────────────────
 model Tenant {
-  id                  String    @id @default(uuid())
-  nombre              String
-  email               String    @unique
-  telefono            String?
-  planId              String?   @map("plan_id")
-  subscriptionStatus  String    @default("ACTIVE") @map("subscription_status")
-  subscriptionStart   DateTime? @map("subscription_start")
-  subscriptionEnd     DateTime? @map("subscription_end")
-  activo              Boolean   @default(true)
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-
-  plan        SubscriptionPlan? @relation(fields: [planId], references: [id])
+  id          String   @id @default(uuid())
+  nombre      String
+  email       String   @unique
+  telefono    String?
+  plan        Plan     @default(BASIC)
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   usuarios    Usuario[]
   clientes    Cliente[]
@@ -55,15 +35,21 @@ model Tenant {
   @@map("tenants")
 }
 
+enum Plan {
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
 // ─── USUARIO ────────────────────────────────
 model Usuario {
-  id            String    @id @default(uuid())
-  tenantId      String    @map("tenant_id")
-  nombre        String
-  apellido      String
-  email         String
-  password      String
-  rol           Rol       @default(AGENTE)
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  nombre     String
+  apellido   String
+  email      String
+  password   String
+  rol        Rol      @default(AGENTE)
   activo        Boolean   @default(true)
   loginAttempts Int       @default(0) @map("login_attempts")
   lockedUntil   DateTime? @map("locked_until")
@@ -71,7 +57,7 @@ model Usuario {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   operaciones OperacionVenta[] @relation("AgenteOperacion")
   tareas      Tarea[]
 
@@ -87,8 +73,8 @@ enum Rol {
 
 // ─── CLIENTE (CRM) ──────────────────────────
 model Cliente {
-  id         String        @id @default(uuid())
-  tenantId   String        @map("tenant_id")
+  id         String       @id @default(uuid())
+  tenantId   String       @map("tenant_id")
   nombre     String
   apellido   String
   telefono   String?
@@ -96,16 +82,16 @@ model Cliente {
   tipo       TipoCliente
   estado     EstadoCliente @default(PROSPECTO)
   notas      String?
-  deletedAt  DateTime?     @map("deleted_at")
-  createdAt  DateTime      @default(now()) @map("created_at")
-  updatedAt  DateTime      @updatedAt @map("updated_at")
+  deletedAt  DateTime?    @map("deleted_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
 
-  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  propiedades   Propiedad[]        @relation("PropietarioPropiedad")
-  contratos     ContratoAlquiler[] @relation("InquilinoContrato")
-  operaciones   OperacionVenta[]   @relation("CompradorOperacion")
-  interacciones Interaccion[]
-  tareas        Tarea[]
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  propiedades    Propiedad[]        @relation("PropietarioPropiedad")
+  contratos      ContratoAlquiler[] @relation("InquilinoContrato")
+  operaciones    OperacionVenta[]   @relation("CompradorOperacion")
+  interacciones  Interaccion[]
+  tareas         Tarea[]
 
   @@map("clientes")
 }
@@ -125,14 +111,14 @@ enum EstadoCliente {
 
 // ─── INTERACCIÓN (Historial CRM) ────────────
 model Interaccion {
-  id          String   @id @default(uuid())
-  clienteId   String   @map("cliente_id")
-  tipo        String
+  id         String   @id @default(uuid())
+  clienteId  String   @map("cliente_id")
+  tipo       String   // llamada, email, visita, nota
   descripcion String
-  fecha       DateTime @default(now())
-  createdAt   DateTime @default(now()) @map("created_at")
+  fecha      DateTime @default(now())
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  cliente    Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
 
   @@map("interacciones")
 }
@@ -182,25 +168,28 @@ enum EstadoPropiedad {
 
 // ─── CONTRATO ALQUILER ───────────────────────
 model ContratoAlquiler {
-  id               String         @id @default(uuid())
-  tenantId         String         @map("tenant_id")
-  propiedadId      String         @map("propiedad_id")
-  inquilinoId      String         @map("inquilino_id")
-  fechaInicio      DateTime       @map("fecha_inicio")
-  fechaFin         DateTime       @map("fecha_fin")
-  montoMensual     Decimal        @map("monto_mensual") @db.Decimal(12, 2)
-  estado           EstadoContrato @default(ACTIVO)
-  tipoAjuste       TipoAjuste?    @map("tipo_ajuste")
-  frecuenciaAjuste Int?           @map("frecuencia_ajuste")
-  porcentajeAjuste Decimal?       @map("porcentaje_ajuste") @db.Decimal(6, 2)
-  proximoAjuste    DateTime?      @map("proximo_ajuste")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  updatedAt        DateTime       @updatedAt @map("updated_at")
+  id            String          @id @default(uuid())
+  tenantId      String          @map("tenant_id")
+  propiedadId   String          @map("propiedad_id")
+  inquilinoId   String          @map("inquilino_id")
+  fechaInicio   DateTime        @map("fecha_inicio")
+  fechaFin      DateTime        @map("fecha_fin")
+  montoMensual  Decimal         @map("monto_mensual") @db.Decimal(12, 2)
+  estado        EstadoContrato  @default(ACTIVO)
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  propiedad        Propiedad         @relation(fields: [propiedadId], references: [id])
-  inquilino        Cliente           @relation("InquilinoContrato", fields: [inquilinoId], references: [id])
-  pagos            PagoAlquiler[]
+  // Ajuste de precio
+  tipoAjuste       TipoAjuste?  @map("tipo_ajuste")
+  frecuenciaAjuste Int?         @map("frecuencia_ajuste") // meses
+  porcentajeAjuste Decimal?     @map("porcentaje_ajuste") @db.Decimal(6, 2)
+  proximoAjuste    DateTime?    @map("proximo_ajuste")
+
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  propiedad  Propiedad      @relation(fields: [propiedadId], references: [id])
+  inquilino  Cliente        @relation("InquilinoContrato", fields: [inquilinoId], references: [id])
+  pagos      PagoAlquiler[]
   historialAjustes HistorialAjuste[]
 
   @@map("contratos_alquiler")
@@ -220,35 +209,35 @@ enum TipoAjuste {
 
 // ─── HISTORIAL DE AJUSTES ────────────────────
 model HistorialAjuste {
-  id            String     @id @default(uuid())
-  contratoId    String     @map("contrato_id")
-  fechaAjuste   DateTime   @map("fecha_ajuste")
-  montoAnterior Decimal    @map("monto_anterior") @db.Decimal(12, 2)
-  montoNuevo    Decimal    @map("monto_nuevo") @db.Decimal(12, 2)
-  porcentaje    Decimal    @db.Decimal(6, 2)
-  tipoAjuste    TipoAjuste @map("tipo_ajuste")
-  detalle       String?
-  createdAt     DateTime   @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  contratoId   String   @map("contrato_id")
+  fechaAjuste  DateTime @map("fecha_ajuste")
+  montoAnterior Decimal @map("monto_anterior") @db.Decimal(12, 2)
+  montoNuevo   Decimal  @map("monto_nuevo") @db.Decimal(12, 2)
+  porcentaje   Decimal  @db.Decimal(6, 2)
+  tipoAjuste   TipoAjuste @map("tipo_ajuste")
+  detalle      String?  // Ej: "IPC Jun+Jul+Ago = 18.3%"
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  contrato ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  contrato     ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
 
   @@map("historial_ajustes")
 }
 
 // ─── PAGO ALQUILER ───────────────────────────
 model PagoAlquiler {
-  id          String     @id @default(uuid())
-  contratoId  String     @map("contrato_id")
-  fechaPago   DateTime?  @map("fecha_pago")
-  monto       Decimal    @db.Decimal(12, 2)
-  montoPagado Decimal?   @map("monto_pagado") @db.Decimal(12, 2)
-  estado      EstadoPago @default(PENDIENTE)
-  formaPago   FormaPago? @map("forma_pago")
-  tipoPago    TipoPago   @default(COMPLETO) @map("tipo_pago")
+  id          String       @id @default(uuid())
+  contratoId  String       @map("contrato_id")
+  fechaPago   DateTime?    @map("fecha_pago")
+  monto       Decimal      @db.Decimal(12, 2)
+  montoPagado Decimal?     @map("monto_pagado") @db.Decimal(12, 2)
+  estado      EstadoPago   @default(PENDIENTE)
+  formaPago   FormaPago?   @map("forma_pago")
+  tipoPago    TipoPago     @default(COMPLETO) @map("tipo_pago")
   notas       String?
-  createdAt   DateTime   @default(now()) @map("created_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
 
-  contrato ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  contrato    ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
 
   @@map("pagos_alquiler")
 }
@@ -274,16 +263,16 @@ enum TipoPago {
 
 // ─── OPERACIÓN VENTA ─────────────────────────
 model OperacionVenta {
-  id          String      @id @default(uuid())
-  tenantId    String      @map("tenant_id")
-  propiedadId String      @map("propiedad_id")
-  compradorId String      @map("comprador_id")
-  agenteId    String?     @map("agente_id")
-  precioFinal Decimal     @map("precio_final") @db.Decimal(12, 2)
-  comision    Decimal     @db.Decimal(12, 2)
-  estado      EstadoVenta @default(NEGOCIACION)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id          String         @id @default(uuid())
+  tenantId    String         @map("tenant_id")
+  propiedadId String         @map("propiedad_id")
+  compradorId String         @map("comprador_id")
+  agenteId    String?        @map("agente_id")
+  precioFinal Decimal        @map("precio_final") @db.Decimal(12, 2)
+  comision    Decimal        @db.Decimal(12, 2)
+  estado      EstadoVenta    @default(NEGOCIACION)
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   propiedad Propiedad @relation(fields: [propiedadId], references: [id])
@@ -301,17 +290,17 @@ enum EstadoVenta {
 
 // ─── GASTO PROPIEDAD ─────────────────────────
 model GastoPropiedad {
-  id          String    @id @default(uuid())
-  tenantId    String    @map("tenant_id")
-  propiedadId String    @map("propiedad_id")
-  tipo        TipoGasto
-  descripcion String
-  monto       Decimal   @db.Decimal(12, 2)
-  fecha       DateTime
-  pagadoPor   PagadoPor @default(PROPIETARIO) @map("pagado_por")
-  comprobante String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  tenantId     String    @map("tenant_id")
+  propiedadId  String    @map("propiedad_id")
+  tipo         TipoGasto
+  descripcion  String
+  monto        Decimal   @db.Decimal(12, 2)
+  fecha        DateTime
+  pagadoPor    PagadoPor @default(PROPIETARIO) @map("pagado_por")
+  comprobante  String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   propiedad Propiedad @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
@@ -382,16 +371,16 @@ enum EstadoTarea {
 
 // ─── FACTURA SERVICIO ─────────────────────────
 model FacturaServicio {
-  id           String        @id @default(uuid())
-  tenantId     String        @map("tenant_id")
-  propiedadId  String        @map("propiedad_id")
-  tipoServicio TipoServicio  @map("tipo_servicio")
-  monto        Decimal       @db.Decimal(12, 2)
-  fechaVence   DateTime      @map("fecha_vence")
-  estado       EstadoFactura @default(PENDIENTE)
+  id           String              @id @default(uuid())
+  tenantId     String              @map("tenant_id")
+  propiedadId  String              @map("propiedad_id")
+  tipoServicio TipoServicio        @map("tipo_servicio")
+  monto        Decimal             @db.Decimal(12, 2)
+  fechaVence   DateTime            @map("fecha_vence")
+  estado       EstadoFactura       @default(PENDIENTE)
   notas        String?
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   propiedad Propiedad @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
@@ -417,13 +406,13 @@ enum EstadoFactura {
 
 // ─── IMAGEN PROPIEDAD ─────────────────────────
 model PropiedadImagen {
-  id          String   @id @default(uuid())
-  tenantId    String   @map("tenant_id")
-  propiedadId String   @map("propiedad_id")
+  id          String    @id @default(uuid())
+  tenantId    String    @map("tenant_id")
+  propiedadId String    @map("propiedad_id")
   url         String
   nombre      String?
-  orden       Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at")
+  orden       Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
 
   tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   propiedad Propiedad @relation(fields: [propiedadId], references: [id], onDelete: Cascade)
@@ -433,15 +422,15 @@ model PropiedadImagen {
 
 // ─── AUDIT LOG ────────────────────────────────
 model AuditLog {
-  id        String   @id @default(uuid())
-  tenantId  String   @map("tenant_id")
-  usuarioId String?  @map("usuario_id")
-  accion    String
-  entidad   String
-  entidadId String?  @map("entidad_id")
-  detalle   Json?
-  ip        String?
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  tenantId   String   @map("tenant_id")
+  usuarioId  String?  @map("usuario_id")
+  accion     String   // CREATE, UPDATE, DELETE, LOGIN, PAGO, ANULAR
+  entidad    String   // cliente, propiedad, contrato, etc.
+  entidadId  String?  @map("entidad_id")
+  detalle    Json?
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@map("audit_logs")
 }
