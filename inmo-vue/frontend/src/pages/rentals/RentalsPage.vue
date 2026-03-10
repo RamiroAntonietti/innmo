@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <div class="flex items-center justify-between mb-6">
       <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
         <FileText :size="24" class="text-primary-500" /> Alquileres
@@ -14,6 +14,7 @@
       <div v-for="c in contratos" :key="c.id" class="card p-5">
         <div class="flex items-start justify-between mb-3">
           <div>
+            <p class="font-mono text-xs text-gray-500 mb-0.5">{{ c.codigo || '—' }}</p>
             <p class="font-semibold text-gray-900">{{ c.propiedad?.titulo }}</p>
             <p class="text-sm text-gray-500">{{ c.propiedad?.direccion }}</p>
           </div>

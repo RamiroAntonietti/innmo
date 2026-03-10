@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -30,6 +30,7 @@
       <div v-for="p in propiedades" :key="p.id" class="card p-5 hover:shadow-md transition-shadow">
         <div class="flex items-start justify-between mb-3">
           <div class="flex-1 min-w-0">
+            <p class="font-mono text-xs text-gray-500 mb-0.5">{{ p.codigo || '—' }}</p>
             <p class="font-semibold text-gray-900 truncate">{{ p.titulo }}</p>
             <p class="text-sm text-gray-500 mt-0.5">{{ p.direccion }}, {{ p.ciudad }}</p>
           </div>

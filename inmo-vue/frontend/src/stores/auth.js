@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
       setSession(data.token || data.data?.token, data.usuario || data.data?.usuario, data.tenant || data.data?.tenant);
       return true;
     } catch (err) {
-      error.value = err.response?.data?.error || 'Error al iniciar sesión.';
+      error.value = err.response?.data?.error || err.response?.data?.message || 'Error al iniciar sesión.';
       return false;
     } finally {
       loading.value = false;

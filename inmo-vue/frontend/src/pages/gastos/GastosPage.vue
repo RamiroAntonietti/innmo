@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -55,9 +55,11 @@
       <!-- Tabla -->
       <div class="card overflow-hidden">
         <div v-if="loading" class="text-center py-16 text-gray-400">Cargando...</div>
-        <table v-else class="w-full text-sm">
+        <div v-else class="table-wrap">
+        <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100">
             <tr class="text-left text-xs text-gray-500">
+              <th class="px-5 py-3 font-medium">Código</th>
               <th class="px-5 py-3 font-medium">Propiedad</th>
               <th class="px-5 py-3 font-medium">Tipo</th>
               <th class="px-5 py-3 font-medium">Descripción</th>
@@ -69,6 +71,9 @@
           </thead>
           <tbody class="divide-y divide-gray-50">
             <tr v-for="g in gastos" :key="g.id" class="hover:bg-gray-50 transition-colors">
+              <td class="px-5 py-4">
+                <span class="font-mono text-xs text-gray-500">{{ g.codigo || '—' }}</span>
+              </td>
               <td class="px-5 py-4">
                 <p class="font-medium text-gray-900">{{ g.propiedad?.titulo }}</p>
                 <p class="text-xs text-gray-400">{{ g.propiedad?.direccion }}</p>
@@ -94,10 +99,11 @@
               </td>
             </tr>
             <tr v-if="!gastos.length">
-              <td colspan="7" class="text-center py-12 text-gray-400">No hay gastos registrados</td>
+              <td colspan="8" class="text-center py-12 text-gray-400">No hay gastos registrados</td>
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
     </template>
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <!-- Header -->
     <div class="flex items-center gap-3 mb-6">
       <button @click="$router.push('/properties')" class="btn-secondary flex items-center gap-2 text-sm">

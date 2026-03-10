@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-2">
       <FileSpreadsheet :size="24" class="text-primary-500" /> Migración y Exportación de datos
     </h1>
@@ -263,7 +263,7 @@ const exportar = async (exp) => {
     let registros = d.data || d;
     if (!Array.isArray(registros)) registros = [registros];
 
-    // Flatten nested objects
+    // Flatten nested objects; poner codigo primero cuando exista (referencia legible)
     const flat = registros.map(r => {
       const row = {};
       Object.entries(r).forEach(([k, v]) => {
@@ -272,6 +272,10 @@ const exportar = async (exp) => {
           Object.entries(v).forEach(([k2, v2]) => { if (typeof v2 !== 'object') row[`${k}_${k2}`] = v2; });
         } else if (!Array.isArray(v)) row[k] = v;
       });
+      if (row.codigo !== undefined && row.codigo !== '') {
+        const { codigo, ...rest } = row;
+        return { codigo, ...rest };
+      }
       return row;
     });
 

@@ -1,0 +1,342 @@
+# InmoSaaS - Cursor Rules
+
+## Descripción del proyecto
+InmoSaaS es un sistema de gestión inmobiliaria multi-tenant desarrollado con NestJS y Vue 3.
+Permite a inmobiliarias gestionar propiedades, clientes, contratos, cobros, gastos y más.
+
+## Stack técnico
+
+### Backend
+- Framework: NestJS 10
+- ORM: Prisma 5 con PostgreSQL
+- Base de datos: Supabase
+- Autenticación: JWT con Passport
+- Validación: class-validator + class-transformer
+- Tareas programadas: @nestjs/schedule
+- Puerto: 3001
+
+### Frontend
+- Framework: Vue 3 (Composition API con <script setup>)
+- Estado global: Pinia
+- Router: Vue Router 4
+- Estilos: Tailwind CSS
+- HTTP: Axios (instancia en src/services/api.js)
+- Iconos: lucide-vue-next
+- Puerto: 5173
+
+### Deploy
+- Backend: Render
+- Frontend: Vercel
+- Base de datos: Supabase (PostgreSQL)
+- Repositorio: https://github.com/RamiroAntonietti/innmo
+
+## Estructura del proyecto
+
+```
+sistema/
+├── inmo-nest/backend/
+│   ├── prisma/
+│   │   └── schema.prisma
+│   └── src/
+│       ├── app.module.ts
+│       ├── main.ts
+│       ├── prisma/
+│       ├── auth/
+│       ├── audit/
+│       ├── plans/
+│       ├── common/
+│       │   ├── guards/
+│       │   └── decorators/
+│       ├── clients/
+│       ├── properties/
+│       ├── rentals/
+│       ├── cobros/
+│       ├── gastos/
+│       ├── facturas/
+│       ├── tareas/
+│       ├── usuarios/
+│       ├── metricas/
+│       ├── dashboard/
+│       ├── sales/
+│       ├── ajustes/
+│       └── reports/
+└── inmo-vue/frontend/
+    └── src/
+        ├── main.js
+        ├── App.vue
+        ├── services/
+        │   └── api.js
+        ├── stores/
+        │   ├── auth.js
+        │   └── plan.js
+        ├── router/
+        │   └── index.js
+        ├── components/
+        │   ├── layout/
+        │   │   └── Layout.vue
+        │   ├── common/
+        │   │   └── UpgradeModal.vue
+        │   └── ui/
+        ├── composables/
+        │   └── usePlanAccess.js
+        └── pages/
+            ├── auth/
+            │   └── LandingPage.vue
+            ├── dashboard/
+            ├── properties/
+            ├── clients/
+            ├── rentals/
+            ├── cobros/
+            ├── gastos/
+            ├── facturas/
+            ├── tareas/
+            ├── usuarios/
+            ├── metricas/
+            ├── sales/
+            └── migracion/
+```
+
+## Arquitectura multi-tenant
+
+- Cada inmobiliaria es un **Tenant**
+- El tenantId se extrae del JWT en cada request
+- TODOS los queries de Prisma deben incluir `where: { tenantId }`
+- Nunca omitir el filtro de tenantId — es una falla de seguridad crítica
+- El decorator `@TenantId()` extrae el tenantId del request en los controllers
+
+## Sistema de planes
+
+### Planes disponibles
+- **STARTER**: máx 10 propiedades, 1 usuario
+- **PRO**: propiedades ilimitadas, máx 5 usuarios
+- **ENTERPRISE**: todo ilimitado
+
+### Módulos por plan
+- STARTER: clientes, propiedades, contratos, cobros, tareas, contratos_pdf, metricas_basicas
+- PRO: todo lo de STARTER + gastos, facturas, ventas, migracion_excel, metricas_avanzadas, ajuste_ipc
+- ENTERPRISE: todo lo de PRO + multi_sucursal, api_integracion, portal_propietario, portal_inquilino
+
+### Control de acceso
+- Backend: usar `@RequirePlanModule('nombre_modulo')` en controllers restringidos
+- Frontend: usar `usePlanAccess()` composable y `planStore.hasModule('nombre_modulo')`
+- Modal de upgrade: `planStore.openUpgradeModal('nombre_modulo')`
+
+## Patrones de código
+
+### Backend — estructura de un módulo NestJS
+
+Cada módulo sigue este patrón:
+
+```typescript
+// DTO de creación
+export class CreateXxxDto {
+  @IsString() campo: string;
+  @IsOptional() @IsString() campoOpcional?: string;
+}
+
+// Service
+@Injectable()
+export class XxxService {
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
+
+  async findAll(tenantId: string) {
+    return this.prisma.xxx.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async create(tenantId: string, dto: CreateXxxDto, usuarioId?: string) {
+    const item = await this.prisma.xxx.create({
+      data: { tenantId, ...dto },
+    });
+    await this.audit.log({
+      tenantId, usuarioId, accion: 'CREATE',
+      entidad: 'xxx', entidadId: item.id,
+    });
+    return item;
+  }
+}
+
+// Controller
+@Controller('xxx')
+@UseGuards(JwtAuthGuard)
+export class XxxController {
+  constructor(private svc: XxxService) {}
+
+  @Get()
+  findAll(@TenantId() tid: string) {
+    return this.svc.findAll(tid);
+  }
+
+  @Post()
+  @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
+  create(
+    @TenantId() tid: string,
+    @Body() dto: CreateXxxDto,
+    @CurrentUser('sub') uid: string,
+  ) {
+    return this.svc.create(tid, dto, uid);
+  }
+}
+
+// Module
+@Module({
+  imports: [AuditModule],
+  providers: [XxxService],
+  controllers: [XxxController],
+})
+export class XxxModule {}
+```
+
+### Frontend — estructura de una página Vue
+
+```vue
+<template>
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Título</h1>
+      <button @click="openModal" class="btn-primary">+ Nuevo</button>
+    </div>
+    <!-- contenido -->
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import api from '@/services/api.js';
+import { usePlanAccess } from '@/composables/usePlanAccess.js';
+
+const { requireModule } = usePlanAccess();
+const items = ref([]);
+const loading = ref(false);
+
+onMounted(async () => {
+  await fetchItems();
+});
+
+const fetchItems = async () => {
+  loading.value = true;
+  try {
+    const { data } = await api.get('/xxx');
+    items.value = data.data || data;
+  } catch (e) {
+    console.error(e);
+  } finally {
+    loading.value = false;
+  }
+};
+</script>
+```
+
+### Frontend — llamadas a la API
+
+```javascript
+// Siempre usar la instancia de api.js, nunca fetch directo
+import api from '@/services/api.js';
+
+// GET
+const { data } = await api.get('/endpoint');
+
+// POST
+const { data } = await api.post('/endpoint', payload);
+
+// PUT
+const { data } = await api.put(`/endpoint/${id}`, payload);
+
+// DELETE
+await api.delete(`/endpoint/${id}`);
+```
+
+### Frontend — manejo de errores de plan
+
+```javascript
+// En un click handler que requiere módulo específico:
+const handleClick = () => {
+  if (!requireModule('gastos')) return; // muestra modal automáticamente
+  // lógica normal
+};
+```
+
+## Convenciones de nombres
+
+### Backend
+- Archivos: `kebab-case.module.ts`, `kebab-case.service.ts`
+- Clases: `PascalCase`
+- Variables/funciones: `camelCase`
+- Tablas Prisma: `snake_case` con `@@map()`
+- Campos Prisma: `camelCase` con `@map("snake_case")`
+
+### Frontend
+- Componentes: `PascalCase.vue`
+- Composables: `useNombreComposable.js`
+- Stores: `nombreStore.js`
+- Variables/funciones: `camelCase`
+
+## Rutas
+
+### Backend (prefijo global: /api/v1)
+- Auth: `/api/v1/auth/login`, `/api/v1/auth/register`, `/api/v1/auth/me`
+- Clientes: `/api/v1/clients`
+- Propiedades: `/api/v1/properties`
+- Contratos: `/api/v1/rentals`
+- Cobros: `/api/v1/cobros`
+- Gastos: `/api/v1/gastos`
+- Facturas: `/api/v1/facturas`
+- Tareas: `/api/v1/tareas`
+- Usuarios: `/api/v1/usuarios`
+- Métricas: `/api/v1/metricas`
+- Dashboard: `/api/v1/dashboard/stats`
+- Ventas: `/api/v1/sales`
+- Planes: `/api/v1/plans/my-plan`
+
+### Frontend (rutas públicas)
+- `/` → LandingPage
+
+### Frontend (rutas protegidas bajo /app)
+- `/app/dashboard`
+- `/app/clients`
+- `/app/properties`
+- `/app/rentals`
+- `/app/cobros`
+- `/app/gastos`
+- `/app/facturas`
+- `/app/tareas`
+- `/app/contratos`
+- `/app/sales`
+- `/app/metricas`
+- `/app/usuarios`
+- `/app/migracion`
+
+## Reglas importantes
+
+1. **Nunca omitir tenantId** en queries de Prisma
+2. **Siempre usar soft delete** — nunca borrar registros permanentemente, usar `deletedAt`
+3. **Siempre filtrar deletedAt: null** en queries de findMany y findFirst
+4. **Registrar en audit** toda acción CREATE, UPDATE, DELETE
+5. **Validar límites del plan** antes de crear propiedades y usuarios
+6. **Nunca exponer el password** en las respuestas — usar `select` para excluirlo
+7. **Mantener consistencia** con los módulos existentes al crear nuevos
+8. **Variables de entorno** — nunca hardcodear URLs o secrets
+9. **Git flow** — siempre probar en local antes de hacer push
+
+## Variables de entorno
+
+### Backend (.env)
+```
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+PORT=3001
+```
+
+### Frontend (.env)
+```
+VITE_SUPABASE_URL=https://vioasywdaavfdtrfdwcq.supabase.co
+VITE_SUPABASE_ANON_KEY=...
+VITE_API_URL=http://localhost:3001/api/v1
+```

@@ -1,11 +1,11 @@
 <template>
-  <div class="p-8">
+  <div>
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
       <p class="text-gray-500 text-sm mt-1">Bienvenido, {{ user?.nombre }}</p>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8" v-if="stats">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" v-if="stats">
       <div class="card p-5">
         <div class="flex items-center justify-between mb-3">
           <p class="text-sm text-gray-500">Clientes</p>

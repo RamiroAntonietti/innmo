@@ -1,23 +1,37 @@
 <template>
-  <div class="flex h-screen bg-gray-50 overflow-hidden">
+  <div class="layout-app flex h-dvh min-h-[100dvh] sm:h-screen bg-gray-50 overflow-hidden safe-area-inset">
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
+    <!-- Backdrop móvil/tablet -->
+    <div
+      v-if="sidebarOpen"
+      class="fixed inset-0 bg-black/40 z-40 lg:hidden transition-opacity"
+      aria-hidden="true"
+      @click="sidebarOpen = false"
+    />
 
+    <!-- Sidebar: drawer en móvil/tablet (fixed), fijo en desktop (static) -->
+    <aside
+      class="sidebar flex flex-col flex-shrink-0 w-64 max-w-[85vw] bg-white border-r border-gray-100 z-50 transition-transform duration-200 ease-out fixed lg:relative inset-y-0 left-0 lg:translate-x-0 lg:max-w-none"
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    >
+      <div class="absolute right-0 top-4 -translate-x-12 lg:hidden">
+        <button type="button" @click="sidebarOpen = false" class="p-2 rounded-lg hover:bg-gray-100 text-gray-500" aria-label="Cerrar menú">
+          <X :size="20" />
+        </button>
+      </div>
       <!-- Logo + plan badge -->
-      <div class="p-5 border-b border-gray-100">
+      <div class="p-4 sm:p-5 border-b border-gray-100 pt-12 lg:pt-5">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-primary-500 rounded-xl flex items-center justify-center">
+          <div class="w-9 h-9 bg-primary-500 rounded-xl flex items-center justify-center flex-shrink-0">
             <Home :size="18" class="text-white" />
           </div>
-          <div>
+          <div class="min-w-0">
             <p class="font-bold text-gray-900 text-sm">InmoSaaS</p>
-            <p class="text-xs text-gray-400 truncate max-w-[140px]">{{ tenant?.nombre }}</p>
+            <p class="text-xs text-gray-400 truncate">{{ tenant?.nombre }}</p>
           </div>
         </div>
-        <!-- Badge del plan -->
-        <div class="mt-3 flex items-center justify-between">
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <span class="text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0"
             :class="{
               'bg-gray-100 text-gray-600': planStore.isStarter,
               'bg-blue-100 text-blue-700': planStore.isPro,
@@ -25,40 +39,37 @@
             }">
             ✦ {{ planStore.plan }}
           </span>
-          <!-- Barra de propiedades si tiene límite -->
-          <span v-if="planStore.limits.maxProperties" class="text-xs text-gray-400">
+          <span v-if="planStore.limits.maxProperties" class="text-xs text-gray-400 truncate">
             {{ planStore.limits.currentProperties }}/{{ planStore.limits.maxProperties }} prop.
           </span>
         </div>
       </div>
 
-      <!-- Nav items -->
-      <nav class="flex-1 p-4 space-y-0.5 overflow-y-auto">
+      <nav class="flex-1 p-3 sm:p-4 space-y-0.5 overflow-y-auto overflow-x-hidden">
         <template v-for="item in navItems" :key="item.to">
-          <!-- Item con acceso -->
           <RouterLink v-if="item.hasAccess"
             :to="item.to"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
-            :class="isActive(item.to) ? 'bg-primary-50 text-primary-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'">
-            <component :is="item.icon" :size="17" />
-            {{ item.label }}
+            class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors min-h-[44px] touch-manipulation"
+            :class="isActive(item.to) ? 'bg-primary-50 text-primary-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100'"
+            @click="sidebarOpen = false">
+            <component :is="item.icon" :size="17" class="flex-shrink-0" />
+            <span class="truncate">{{ item.label }}</span>
           </RouterLink>
-          <!-- Item bloqueado por plan -->
           <button v-else
+            type="button"
             @click="planStore.openUpgradeModal(item.planModule)"
-            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-gray-50 cursor-pointer transition-colors group">
-            <component :is="item.icon" :size="17" class="text-gray-300" />
-            <span class="flex-1 text-left">{{ item.label }}</span>
-            <span class="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md font-semibold opacity-0 group-hover:opacity-100 transition-opacity">PRO</span>
+            class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-300 hover:bg-gray-50 cursor-pointer transition-colors group min-h-[44px] touch-manipulation">
+            <component :is="item.icon" :size="17" class="text-gray-300 flex-shrink-0" />
+            <span class="flex-1 text-left truncate">{{ item.label }}</span>
+            <span class="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">PRO</span>
             <Lock :size="12" class="text-gray-300 flex-shrink-0" />
           </button>
         </template>
       </nav>
 
-      <!-- User footer -->
-      <div class="p-4 border-t border-gray-100">
+      <div class="p-3 sm:p-4 border-t border-gray-100">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-xs font-bold text-primary-600">
+          <div class="w-9 h-9 bg-primary-100 rounded-full flex items-center justify-center text-xs font-bold text-primary-600 flex-shrink-0">
             {{ userInitials }}
           </div>
           <div class="flex-1 min-w-0">
@@ -66,23 +77,33 @@
             <p class="text-xs text-gray-400">{{ user?.rol }}</p>
           </div>
         </div>
-        <button @click="handleLogout" class="btn-secondary w-full flex items-center justify-center gap-2 text-xs py-2">
+        <button type="button" @click="handleLogout" class="btn-secondary w-full flex items-center justify-center gap-2 text-xs py-3 min-h-[44px] touch-manipulation">
           <LogOut :size="14" /> Cerrar sesión
         </button>
       </div>
     </aside>
 
     <!-- Main -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-end px-6 flex-shrink-0">
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+      <header class="h-14 min-h-[52px] bg-white border-b border-gray-100 flex items-center justify-between gap-3 px-3 sm:px-6 flex-shrink-0 safe-area-top">
+        <button
+          type="button"
+          @click="sidebarOpen = true"
+          class="lg:hidden p-2.5 -ml-1 rounded-xl text-gray-600 hover:bg-gray-100 active:bg-gray-200 touch-manipulation"
+          aria-label="Abrir menú"
+        >
+          <Menu :size="22" />
+        </button>
+        <div class="flex-1 min-w-0" />
         <NotificationBell />
       </header>
-      <main class="flex-1 overflow-y-auto">
-        <RouterView />
+      <main class="flex-1 overflow-y-auto overflow-x-hidden">
+        <div class="app-content">
+          <RouterView />
+        </div>
       </main>
     </div>
 
-    <!-- Modal de upgrade global -->
     <UpgradeModal />
   </div>
 </template>
@@ -97,14 +118,19 @@ import UpgradeModal from '../common/UpgradeModal.vue';
 import {
   LayoutDashboard, Users, Building2, FileText, TrendingUp,
   BarChart2, LogOut, Home, DollarSign, FileSpreadsheet, Shield,
-  Receipt, CheckSquare, FilePlus, Zap, Lock
+  Receipt, CheckSquare, FilePlus, Zap, Lock, Menu, X
 } from 'lucide-vue-next';
+import { ref, watch } from 'vue';
 
 const auth = useAuthStore();
 const planStore = usePlanStore();
 const route = useRoute();
 const router = useRouter();
 const { user, tenant } = auth;
+
+const sidebarOpen = ref(false);
+
+watch(() => route.path, () => { sidebarOpen.value = false; });
 
 onMounted(async () => {
   if (!planStore.loaded) await planStore.fetchPlan();

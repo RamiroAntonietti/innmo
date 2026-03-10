@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-6">
       <TrendingUp :size="24" class="text-primary-500" /> Ventas
     </h1>

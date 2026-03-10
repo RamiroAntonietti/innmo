@@ -1,5 +1,5 @@
 <template>
-  <div class="p-8">
+  <div>
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -28,9 +28,11 @@
     <!-- Tabla -->
     <div class="card overflow-hidden">
       <div v-if="loading" class="text-center py-16 text-gray-400">Cargando...</div>
-      <table v-else class="w-full text-sm">
+      <div v-else class="table-wrap">
+      <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100">
           <tr class="text-left text-xs text-gray-500">
+            <th class="px-5 py-3 font-medium">Código</th>
             <th class="px-5 py-3 font-medium">Cliente</th>
             <th class="px-5 py-3 font-medium">Contacto</th>
             <th class="px-5 py-3 font-medium">Tipo</th>
@@ -40,6 +42,9 @@
         </thead>
         <tbody class="divide-y divide-gray-50">
           <tr v-for="c in clientes" :key="c.id" class="hover:bg-gray-50 transition-colors">
+            <td class="px-5 py-4">
+              <span class="font-mono text-xs text-gray-500">{{ c.codigo || '—' }}</span>
+            </td>
             <td class="px-5 py-4">
               <div class="flex items-center gap-3">
                 <div class="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-xs font-bold text-primary-600">
@@ -68,10 +73,11 @@
             </td>
           </tr>
           <tr v-if="!clientes.length">
-            <td colspan="5" class="text-center py-12 text-gray-400">No hay clientes</td>
+            <td colspan="6" class="text-center py-12 text-gray-400">No hay clientes</td>
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Modal -->
