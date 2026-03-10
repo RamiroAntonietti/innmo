@@ -9,6 +9,7 @@ import { RequirePlanModule, PlanGuard } from '../common/guards/plan.guard';
 import { TenantId, CurrentUser } from '../common/decorators/user.decorator';
 import { AuditModule } from '../audit/audit.module';
 import { PlansModule } from '../plans/plans.module';
+import { generarCodigo, PREFIJOS } from '../common/utils/codigo.util';
 
 enum TipoGasto { REPARACION='REPARACION', IMPUESTO='IMPUESTO', EXPENSA='EXPENSA', SEGURO='SEGURO', SERVICIO='SERVICIO', HONORARIO='HONORARIO', OTRO='OTRO' }
 enum PagadoPor { PROPIETARIO='PROPIETARIO', INMOBILIARIA='INMOBILIARIA' }
@@ -57,8 +58,9 @@ export class GastosService {
     const propiedad = await this.prisma.propiedad.findFirst({ where: { id: dto.propiedadId, tenantId, deletedAt: null } });
     if (!propiedad) throw new NotFoundException('Propiedad no encontrada.');
 
+    const codigo = generarCodigo(PREFIJOS.GASTO);
     const gasto = await this.prisma.gastoPropiedad.create({
-      data: { tenantId, propiedadId: dto.propiedadId, tipo: dto.tipo, descripcion: dto.descripcion, monto: dto.monto, fecha: new Date(dto.fecha), pagadoPor: dto.pagadoPor || 'PROPIETARIO', comprobante: dto.comprobante },
+      data: { tenantId, codigo, propiedadId: dto.propiedadId, tipo: dto.tipo, descripcion: dto.descripcion, monto: dto.monto, fecha: new Date(dto.fecha), pagadoPor: dto.pagadoPor || 'PROPIETARIO', comprobante: dto.comprobante },
     });
 
     await this.audit.log({ tenantId, usuarioId, accion: 'CREATE', entidad: 'gasto', entidadId: gasto.id, detalle: { tipo: dto.tipo, monto: dto.monto } });

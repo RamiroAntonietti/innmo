@@ -7,6 +7,7 @@ import { AuditModule } from '../audit/audit.module';
 import { AuditService } from '../audit/audit.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '../common/guards/auth.guard';
 import { TenantId, CurrentUser } from '../common/decorators/user.decorator';
+import { generarCodigo, PREFIJOS } from '../common/utils/codigo.util';
 
 enum FormaPago { EFECTIVO='EFECTIVO', TRANSFERENCIA='TRANSFERENCIA', CHEQUE='CHEQUE', TARJETA='TARJETA' }
 enum TipoPago { COMPLETO='COMPLETO', PARCIAL='PARCIAL' }
@@ -86,10 +87,13 @@ export class RentalsService {
       throw new BadRequestException('La propiedad ya tiene un contrato activo.');
     }
 
+    const codigoContrato = generarCodigo(PREFIJOS.CONTRATO);
+    const codigoPago = generarCodigo(PREFIJOS.COBRO);
     const contrato = await this.prisma.$transaction(async (tx) => {
       const c = await tx.contratoAlquiler.create({
         data: {
           tenantId,
+          codigo: codigoContrato,
           propiedadId: dto.propiedadId,
           inquilinoId: dto.inquilinoId,
           fechaInicio,
@@ -99,15 +103,13 @@ export class RentalsService {
         include: { propiedad: true, inquilino: true },
       });
 
-      // Cambiar estado de propiedad a ALQUILADO
       await tx.propiedad.update({
         where: { id: dto.propiedadId },
         data: { estado: 'ALQUILADO' },
       });
 
-      // Crear primer pago pendiente
       await tx.pagoAlquiler.create({
-        data: { contratoId: c.id, monto: dto.montoMensual, estado: 'PENDIENTE', fechaPago: fechaInicio },
+        data: { contratoId: c.id, codigo: codigoPago, monto: dto.montoMensual, estado: 'PENDIENTE', fechaPago: fechaInicio },
       });
 
       return c;
@@ -156,9 +158,9 @@ export class RentalsService {
 
       if (tipoPago === 'PARCIAL') {
         const saldo = Number(pendiente.monto) - Number(montoPagado);
-        await tx.pagoAlquiler.create({ data: { contratoId, monto: saldo, estado: 'PENDIENTE' } });
+        await tx.pagoAlquiler.create({ data: { contratoId, codigo: generarCodigo(PREFIJOS.COBRO), monto: saldo, estado: 'PENDIENTE' } });
       } else {
-        await tx.pagoAlquiler.create({ data: { contratoId, monto: contrato.montoMensual, estado: 'PENDIENTE' } });
+        await tx.pagoAlquiler.create({ data: { contratoId, codigo: generarCodigo(PREFIJOS.COBRO), monto: contrato.montoMensual, estado: 'PENDIENTE' } });
       }
     });
 

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { CreateClientDto, UpdateClientDto } from './clients.dto';
+import { generarCodigo, PREFIJOS } from '../common/utils/codigo.util';
 
 @Injectable()
 export class ClientsService {
@@ -43,7 +44,8 @@ export class ClientsService {
       if (exists) throw new ConflictException('Ya existe un cliente con ese email.');
     }
 
-    const cliente = await this.prisma.cliente.create({ data: { ...dto, tenantId } });
+    const codigo = generarCodigo(PREFIJOS.CLIENTE);
+    const cliente = await this.prisma.cliente.create({ data: { ...dto, tenantId, codigo } });
 
     await this.audit.log({
       tenantId, usuarioId, accion: 'CREATE', entidad: 'cliente',

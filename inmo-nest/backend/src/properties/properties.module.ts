@@ -32,6 +32,7 @@ import { RequirePlanModule, PlanGuard } from '../common/guards/plan.guard';
 import { TenantId, CurrentUser } from '../common/decorators/user.decorator';
 import { AuditModule } from '../audit/audit.module';
 import { PlansModule } from '../plans/plans.module';
+import { generarCodigo, PREFIJOS } from '../common/utils/codigo.util';
 
 enum TipoOperacion { VENTA = 'VENTA', ALQUILER = 'ALQUILER' }
 enum EstadoPropiedad { DISPONIBLE = 'DISPONIBLE', RESERVADO = 'RESERVADO', VENDIDO = 'VENDIDO', ALQUILADO = 'ALQUILADO' }
@@ -116,7 +117,8 @@ export class PropertiesService {
         throw new BadRequestException('El cliente seleccionado no es de tipo PROPIETARIO.');
     }
 
-    const propiedad = await this.prisma.propiedad.create({ data: { ...dto, tenantId } });
+    const codigo = generarCodigo(PREFIJOS.PROPIEDAD);
+    const propiedad = await this.prisma.propiedad.create({ data: { ...dto, tenantId, codigo } });
 
     await this.audit.log({
       tenantId, usuarioId, accion: 'CREATE', entidad: 'propiedad',
