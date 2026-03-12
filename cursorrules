@@ -301,15 +301,18 @@ const handleClick = () => {
 - `/app/clients`
 - `/app/properties`
 - `/app/rentals`
-- `/app/cobros`
-- `/app/gastos`
-- `/app/facturas`
-- `/app/tareas`
-- `/app/contratos`
+- `/app/payments`
+- `/app/expenses`
+- `/app/service-invoices`
+- `/app/issued-invoices`
+- `/app/tasks`
+- `/app/inquiries`
+- `/app/contracts`
 - `/app/sales`
-- `/app/metricas`
-- `/app/usuarios`
-- `/app/migracion`
+- `/app/metrics`
+- `/app/users`
+- `/app/account`
+- `/app/migration`
 
 ## Reglas importantes
 

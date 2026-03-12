@@ -19,4 +19,5 @@ export const PREFIJOS = {
   COBRO: 'COB',
   GASTO: 'GAS',
   VENTA: 'VEN',
+  PRESUPUESTO: 'PRE',
 } as const;

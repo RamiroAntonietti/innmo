@@ -5,7 +5,7 @@
       <p class="text-gray-500 text-sm mt-1">Bienvenido, {{ user?.nombre }}</p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" v-if="stats">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6" v-if="stats">
       <div class="card p-5">
         <div class="flex items-center justify-between mb-3">
           <p class="text-sm text-gray-500">Clientes</p>
@@ -36,9 +36,26 @@
       </div>
     </div>
 
-    <div class="card p-6" v-if="stats">
-      <p class="text-sm font-semibold text-gray-700 mb-1">Ingresos del mes</p>
-      <p class="text-4xl font-bold text-green-600">${{ formatMonto(stats.ingresosMes) }}</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8" v-if="stats">
+      <div class="card p-5">
+        <p class="text-sm text-gray-500 mb-1">Ingresos del mes</p>
+        <p class="text-2xl font-bold text-green-600">${{ formatMonto(stats.ingresosMes) }}</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-sm text-gray-500 mb-1">Ingresos proyectados</p>
+        <p class="text-2xl font-bold text-amber-600">${{ formatMonto(stats.ingresosProyectados) }}</p>
+        <p class="text-xs text-gray-400 mt-1">Pagos pendientes del mes</p>
+      </div>
+      <div class="card p-5 cursor-pointer hover:border-primary-200 transition-colors" @click="$router.push('/app/rentals')">
+        <p class="text-sm text-gray-500 mb-1">Contratos por vencer</p>
+        <p class="text-2xl font-bold" :class="stats.contratosPorVencer > 0 ? 'text-amber-600' : 'text-gray-400'">{{ stats.contratosPorVencer }}</p>
+        <p class="text-xs text-primary-500 mt-1">Próximos 30 días →</p>
+      </div>
+      <div class="card p-5 cursor-pointer hover:border-primary-200 transition-colors" @click="$router.push('/app/inquiries')">
+        <p class="text-sm text-gray-500 mb-1">Consultas sin leer</p>
+        <p class="text-2xl font-bold" :class="stats.consultasSinLeer > 0 ? 'text-blue-600' : 'text-gray-400'">{{ stats.consultasSinLeer }}</p>
+        <p class="text-xs text-primary-500 mt-1">Ver consultas →</p>
+      </div>
     </div>
 
     <div v-if="loading" class="text-center py-16 text-gray-400">Cargando...</div>

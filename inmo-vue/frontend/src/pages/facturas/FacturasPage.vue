@@ -3,12 +3,12 @@
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Zap :size="24" class="text-primary-500" /> Facturas de servicios
+          <Zap :size="24" class="text-primary-500" /> Servicios por propiedad
         </h1>
-        <p class="text-gray-500 text-sm mt-1">Servicios por propiedad</p>
+        <p class="text-gray-500 text-sm mt-1">Luz, gas, expensas y otros servicios de la propiedad</p>
       </div>
       <button @click="openModal(null)" class="btn-primary flex items-center gap-2">
-        <Plus :size="18" /> Nueva factura
+        <Plus :size="18" /> Nuevo servicio
       </button>
     </div>
 
@@ -29,7 +29,7 @@
     <!-- Alertas de próximas a vencer -->
     <div v-if="proximas.length" class="card p-4 mb-5 bg-orange-50 border-orange-200">
       <p class="text-sm font-semibold text-orange-700 flex items-center gap-2 mb-2">
-        <AlertTriangle :size="15" /> {{ proximas.length }} factura(s) próxima(s) a vencer
+        <AlertTriangle :size="15" /> {{ proximas.length }} servicio(s) próximo(s) a vencer
       </p>
       <div class="space-y-1">
         <p v-for="f in proximas" :key="f.id" class="text-xs text-orange-600">
@@ -83,7 +83,7 @@
             </td>
           </tr>
           <tr v-if="!facturas.length">
-            <td colspan="6" class="text-center py-12 text-gray-400">No hay facturas registradas</td>
+            <td colspan="6" class="text-center py-12 text-gray-400">No hay servicios registrados</td>
           </tr>
         </tbody>
       </table>
@@ -93,7 +93,7 @@
     <div v-if="modal" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="card w-full max-w-md p-6">
         <div class="flex items-center justify-between mb-5">
-          <h2 class="text-lg font-semibold">{{ editando ? 'Editar factura' : 'Nueva factura' }}</h2>
+          <h2 class="text-lg font-semibold">{{ editando ? 'Editar servicio' : 'Nuevo servicio' }}</h2>
           <button @click="modal = false" class="p-1.5 hover:bg-gray-100 rounded-lg"><X :size="18" /></button>
         </div>
         <form @submit.prevent="guardar" class="space-y-4">
@@ -222,7 +222,7 @@ const marcarPagado = async (f) => {
 };
 
 const eliminar = async (f) => {
-  if (!confirm(`¿Eliminar factura de ${tipoLabel(f.tipoServicio)}?`)) return;
+  if (!confirm(`¿Eliminar servicio de ${tipoLabel(f.tipoServicio)}?`)) return;
   await api.delete(`/facturas/${f.id}`);
   fetchFacturas();
 };

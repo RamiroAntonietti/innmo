@@ -45,7 +45,24 @@ export class ClientsService {
     }
 
     const codigo = generarCodigo(PREFIJOS.CLIENTE);
-    const cliente = await this.prisma.cliente.create({ data: { ...dto, tenantId, codigo } });
+    const cliente = await this.prisma.cliente.create({
+      data: {
+        tenantId,
+        codigo,
+        nombre: dto.nombre,
+        apellido: dto.apellido,
+        email: dto.email,
+        telefono: dto.telefono,
+        tipo: dto.tipo,
+        estado: dto.estado,
+        notas: dto.notas,
+        cuit: dto.cuit,
+        razonSocial: dto.razonSocial,
+        condicionIva: dto.condicionIva,
+        domicilioFiscal: dto.domicilioFiscal,
+        requiereFactura: dto.requiereFactura ?? false,
+      } as any,
+    });
 
     await this.audit.log({
       tenantId, usuarioId, accion: 'CREATE', entidad: 'cliente',
@@ -66,7 +83,7 @@ export class ClientsService {
       if (emailExists) throw new ConflictException('Ya existe un cliente con ese email.');
     }
 
-    const cliente = await this.prisma.cliente.update({ where: { id }, data: dto });
+    const cliente = await this.prisma.cliente.update({ where: { id }, data: dto as any });
 
     await this.audit.log({
       tenantId, usuarioId, accion: 'UPDATE', entidad: 'cliente',

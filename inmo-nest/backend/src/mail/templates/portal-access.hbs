@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso al portal</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .credentials { background: #fff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .credentials p { margin: 8px 0; }
+    .credentials strong { color: #0284c7; }
+    .btn { display: inline-block; background: #0ea5e9; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; font-weight: 600; }
+    .btn:hover { background: #0284c7; }
+    .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 15px 0; font-size: 14px; }
+    .footer { margin-top: 20px; font-size: 12px; color: #6b7280; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0;">Acceso al portal</h1>
+    <p style="margin: 10px 0 0; opacity: 0.95;">Portal de {{tipoPortalLabel}}</p>
+  </div>
+  <div class="content">
+    <p>Hola {{nombre}},</p>
+    <p>Se te ha otorgado acceso al portal de {{tipoPortalLabel}}. A continuación encontrás tus credenciales temporales:</p>
+    <div class="credentials">
+      <p><strong>Usuario:</strong> {{email}}</p>
+      <p><strong>Contraseña temporal:</strong> {{passwordTemporal}}</p>
+    </div>
+    <p class="warning">Por seguridad, te recomendamos cambiar tu contraseña al primer inicio de sesión.</p>
+    <p><a href="{{portalUrl}}" class="btn">Acceder al portal</a></p>
+    <p style="font-size: 14px; color: #6b7280;">Si el botón no funciona, copiá este enlace en tu navegador: {{portalUrl}}</p>
+  </div>
+  <div class="footer">
+    <p>Este es un correo automático. Por favor no responder.</p>
+  </div>
+</body>
+</html>

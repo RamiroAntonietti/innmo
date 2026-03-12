@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pago registrado</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .receipt { background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 20px; margin: 20px 0; }
+    .receipt-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+    .receipt-row:last-child { border-bottom: none; }
+    .amount { font-size: 24px; font-weight: 700; color: #059669; }
+    .footer { margin-top: 20px; font-size: 12px; color: #6b7280; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0;">✓ Pago registrado</h1>
+    <p style="margin: 10px 0 0; opacity: 0.95;">Confirmación de pago</p>
+  </div>
+  <div class="content">
+    <p>Hola {{nombreInquilino}},</p>
+    <p>Te confirmamos que hemos registrado tu pago correctamente:</p>
+    <div class="receipt">
+      <div class="receipt-row">
+        <span>Propiedad:</span>
+        <strong>{{propiedad}}</strong>
+      </div>
+      <div class="receipt-row">
+        <span>Monto:</span>
+        <span class="amount">${{monto}}</span>
+      </div>
+      <div class="receipt-row">
+        <span>Fecha de pago:</span>
+        <span>{{fechaPago}}</span>
+      </div>
+      {{#if formaPago}}
+      <div class="receipt-row">
+        <span>Forma de pago:</span>
+        <span>{{formaPago}}</span>
+      </div>
+      {{/if}}
+    </div>
+    <p>Gracias por tu pago.</p>
+  </div>
+  <div class="footer">
+    <p>Este es un correo automático. Por favor no responder.</p>
+  </div>
+</body>
+</html>

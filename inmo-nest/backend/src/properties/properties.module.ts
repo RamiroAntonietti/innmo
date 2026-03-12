@@ -21,7 +21,7 @@ async create(tenantId: string, dto: CreatePropertyDto, usuarioId?: string) {
 
 // ── ARCHIVO COMPLETO ACTUALIZADO ──────────────────────────────────
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { IsString, IsNumber, IsEnum, IsOptional, Min, MinLength } from 'class-validator';
+import { IsString, IsNumber, IsEnum, IsOptional, IsBoolean, Min, MinLength } from 'class-validator';
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -47,8 +47,9 @@ export class CreatePropertyDto {
   @IsEnum(EstadoPropiedad) @IsOptional() estado?: EstadoPropiedad;
   @IsNumber() @IsOptional() @Min(0) dormitorios?: number;
   @IsNumber() @IsOptional() @Min(0) banos?: number;
-  @IsNumber() @IsOptional() @Min(10) metrosCuadrados?: number;
+  @IsNumber() @IsOptional() @Min(0) metrosCuadrados?: number;
   @IsString() @IsOptional() propietarioId?: string;
+  @IsBoolean() @IsOptional() amueblada?: boolean;
 }
 
 export class UpdatePropertyDto {
@@ -61,8 +62,25 @@ export class UpdatePropertyDto {
   @IsEnum(EstadoPropiedad) @IsOptional() estado?: EstadoPropiedad;
   @IsNumber() @IsOptional() @Min(0) dormitorios?: number;
   @IsNumber() @IsOptional() @Min(0) banos?: number;
-  @IsNumber() @IsOptional() @Min(10) metrosCuadrados?: number;
+  @IsNumber() @IsOptional() @Min(0) metrosCuadrados?: number;
   @IsString() @IsOptional() propietarioId?: string;
+  @IsBoolean() @IsOptional() amueblada?: boolean;
+}
+
+enum EstadoInventario { BUENO = 'BUENO', REGULAR = 'REGULAR', DETERIORADO = 'DETERIORADO' }
+
+export class CreateInventarioItemDto {
+  @IsString() nombre: string;
+  @IsNumber() @IsOptional() @Min(1) cantidad?: number;
+  @IsEnum(EstadoInventario) @IsOptional() estado?: EstadoInventario;
+  @IsString() @IsOptional() observaciones?: string;
+}
+
+export class UpdateInventarioItemDto {
+  @IsString() @IsOptional() nombre?: string;
+  @IsNumber() @IsOptional() @Min(1) cantidad?: number;
+  @IsEnum(EstadoInventario) @IsOptional() estado?: EstadoInventario;
+  @IsString() @IsOptional() observaciones?: string;
 }
 
 @Injectable()
@@ -82,7 +100,10 @@ export class PropertiesService {
       { ciudad: { contains: search, mode: 'insensitive' } },
     ];
     if (tipoOperacion) where.tipoOperacion = tipoOperacion;
-    if (estado) where.estado = estado;
+    if (estado) {
+      const estados = typeof estado === 'string' && estado.includes(',') ? estado.split(',').map((e) => e.trim()) : [estado];
+      where.estado = estados.length > 1 ? { in: estados } : estado;
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.propiedad.findMany({
@@ -98,7 +119,11 @@ export class PropertiesService {
   async findOne(tenantId: string, id: string) {
     const p = await this.prisma.propiedad.findFirst({
       where: { id, tenantId, deletedAt: null },
-      include: { propietario: true, imagenes: { orderBy: { orden: 'asc' } } },
+      include: {
+        propietario: true,
+        imagenes: { orderBy: { orden: 'asc' } },
+        inventario: { orderBy: { nombre: 'asc' } },
+      },
     });
     if (!p) throw new NotFoundException('Propiedad no encontrada.');
     return p;
@@ -118,7 +143,10 @@ export class PropertiesService {
     }
 
     const codigo = generarCodigo(PREFIJOS.PROPIEDAD);
-    const propiedad = await this.prisma.propiedad.create({ data: { ...dto, tenantId, codigo } });
+    const data: any = { ...dto, tenantId, codigo };
+    if (!data.propietarioId || data.propietarioId === '') delete data.propietarioId;
+    if (data.metrosCuadrados === 0 || data.metrosCuadrados === null) data.metrosCuadrados = undefined;
+    const propiedad = await this.prisma.propiedad.create({ data });
 
     await this.audit.log({
       tenantId, usuarioId, accion: 'CREATE', entidad: 'propiedad',
@@ -189,12 +217,72 @@ export class ImagenesService {
   }
 }
 
+@Injectable()
+export class InventarioService {
+  constructor(private prisma: PrismaService) {}
+
+  async findByPropiedad(tenantId: string, propiedadId: string) {
+    await this.verifyPropiedad(tenantId, propiedadId);
+    return this.prisma.inventarioItem.findMany({
+      where: { tenantId, propiedadId },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  async create(tenantId: string, propiedadId: string, dto: CreateInventarioItemDto) {
+    await this.verifyPropiedad(tenantId, propiedadId);
+    return this.prisma.inventarioItem.create({
+      data: {
+        tenantId,
+        propiedadId,
+        nombre: dto.nombre,
+        cantidad: dto.cantidad ?? 1,
+        estado: dto.estado ?? 'BUENO',
+        observaciones: dto.observaciones,
+      },
+    });
+  }
+
+  async update(tenantId: string, propiedadId: string, itemId: string, dto: UpdateInventarioItemDto) {
+    await this.verifyPropiedad(tenantId, propiedadId);
+    const item = await this.prisma.inventarioItem.findFirst({
+      where: { id: itemId, tenantId, propiedadId },
+    });
+    if (!item) throw new NotFoundException('Ítem de inventario no encontrado.');
+    return this.prisma.inventarioItem.update({ where: { id: itemId }, data: dto });
+  }
+
+  async remove(tenantId: string, propiedadId: string, itemId: string) {
+    await this.verifyPropiedad(tenantId, propiedadId);
+    const item = await this.prisma.inventarioItem.findFirst({
+      where: { id: itemId, tenantId, propiedadId },
+    });
+    if (!item) throw new NotFoundException('Ítem de inventario no encontrado.');
+    return this.prisma.inventarioItem.delete({ where: { id: itemId } });
+  }
+
+  private async verifyPropiedad(tenantId: string, propiedadId: string) {
+    const p = await this.prisma.propiedad.findFirst({
+      where: { id: propiedadId, tenantId, deletedAt: null },
+    });
+    if (!p) throw new NotFoundException('Propiedad no encontrada.');
+  }
+}
+
 @Controller('properties')
 @UseGuards(JwtAuthGuard)
 export class PropertiesController {
-  constructor(private svc: PropertiesService, private imgSvc: ImagenesService) {}
+  constructor(
+    private svc: PropertiesService,
+    private imgSvc: ImagenesService,
+    private inventarioSvc: InventarioService,
+  ) {}
 
   @Get() findAll(@TenantId() tid: string, @Query() q: any) { return this.svc.findAll(tid, q); }
+  @Get(':id/inventario')
+  getInventario(@TenantId() tid: string, @Param('id') id: string) {
+    return this.inventarioSvc.findByPropiedad(tid, id);
+  }
   @Get(':id') findOne(@TenantId() tid: string, @Param('id') id: string) { return this.svc.findOne(tid, id); }
 
   @Post()
@@ -222,7 +310,38 @@ export class PropertiesController {
   @Delete('imagenes/:id')
   @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
   removeImagen(@TenantId() tid: string, @Param('id') id: string) { return this.imgSvc.remove(tid, id); }
+
+  @Post(':id/inventario')
+  @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
+  addInventarioItem(
+    @TenantId() tid: string,
+    @Param('id') id: string,
+    @Body() dto: CreateInventarioItemDto,
+  ) {
+    return this.inventarioSvc.create(tid, id, dto);
+  }
+
+  @Put(':id/inventario/:itemId')
+  @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
+  updateInventarioItem(
+    @TenantId() tid: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateInventarioItemDto,
+  ) {
+    return this.inventarioSvc.update(tid, id, itemId, dto);
+  }
+
+  @Delete(':id/inventario/:itemId')
+  @UseGuards(RolesGuard) @Roles('ADMIN', 'AGENTE')
+  removeInventarioItem(
+    @TenantId() tid: string,
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+  ) {
+    return this.inventarioSvc.remove(tid, id, itemId);
+  }
 }
 
-@Module({ imports: [AuditModule, PlansModule], providers: [PropertiesService, ImagenesService], controllers: [PropertiesController], exports: [PropertiesService] })
+@Module({ imports: [AuditModule, PlansModule], providers: [PropertiesService, ImagenesService, InventarioService], controllers: [PropertiesController], exports: [PropertiesService] })
 export class PropertiesModule {}

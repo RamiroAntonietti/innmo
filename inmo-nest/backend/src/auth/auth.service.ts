@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { MailService } from '../mail/mail.service';
 import { LoginDto, RegisterDto } from './auth.dto';
 
 const MAX_ATTEMPTS = 5;
@@ -14,6 +15,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private audit: AuditService,
+    private mail: MailService,
   ) {}
 
   async register({ tenant: td, admin: ad }: RegisterDto) {
@@ -44,6 +46,13 @@ export class AuthService {
       entidadId: result.tenant.id,
       detalle: { nombre: result.tenant.nombre },
     });
+
+    // Enviar email de bienvenida (no bloqueante)
+    this.mail.sendWelcomeInmobiliaria(result.admin.email, {
+      nombreInmobiliaria: result.tenant.nombre,
+      emailAdmin: result.admin.email,
+      nombreAdmin: `${result.admin.nombre} ${result.admin.apellido}`,
+    }).catch((err) => console.error('Error enviando email de bienvenida:', err?.message));
 
     const token = this.generateToken(result.admin, result.tenant.id);
     return { token, tenant: result.tenant, usuario: this.sanitize(result.admin) };

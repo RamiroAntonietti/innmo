@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contrato por vencer</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+    .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    .alert-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px; }
+    .info-row { padding: 8px 0; }
+    .info-row strong { color: #92400e; }
+    .days { font-size: 28px; font-weight: 700; color: #d97706; }
+    .footer { margin-top: 20px; font-size: 12px; color: #6b7280; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 style="margin: 0;">⚠ Alerta de contrato</h1>
+    <p style="margin: 10px 0 0; opacity: 0.95;">Tu contrato está por vencer</p>
+  </div>
+  <div class="content">
+    <p>Hola {{nombreInquilino}},</p>
+    <p>Te informamos que tu contrato de alquiler está por vencer en los próximos días:</p>
+    <div class="alert-box">
+      <div class="info-row">
+        <strong>Propiedad:</strong> {{propiedad}}
+      </div>
+      <div class="info-row">
+        <strong>Fecha de vencimiento:</strong> {{fechaVencimiento}}
+      </div>
+      <div class="info-row">
+        <strong>Días restantes:</strong> <span class="days">{{diasRestantes}} días</span>
+      </div>
+      {{#if codigoContrato}}
+      <div class="info-row">
+        <strong>Código de contrato:</strong> {{codigoContrato}}
+      </div>
+      {{/if}}
+    </div>
+    <p>Te recomendamos contactar a tu inmobiliaria para renovar o gestionar la renovación del contrato antes de la fecha de vencimiento.</p>
+  </div>
+  <div class="footer">
+    <p>Este es un correo automático. Por favor no responder.</p>
+  </div>
+</body>
+</html>

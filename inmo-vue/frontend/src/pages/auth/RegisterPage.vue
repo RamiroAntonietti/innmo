@@ -134,7 +134,7 @@ const handleSubmit = async () => {
     });
     const d = data.data || data;
     auth.setSession(d.token, d.usuario, d.tenant);
-    router.push('/dashboard');
+    router.push('/app/dashboard');
   } catch (err) {
     error.value = err.response?.data?.error || 'Error al registrar';
   } finally {

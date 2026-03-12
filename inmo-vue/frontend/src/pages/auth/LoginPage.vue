@@ -69,6 +69,6 @@ const form = ref({ tenantEmail: '', email: '', password: '' });
 
 const handleSubmit = async () => {
   const ok = await auth.login(form.value);
-  if (ok) router.push('/dashboard');
+  if (ok) router.push('/app/dashboard');
 };
 </script>

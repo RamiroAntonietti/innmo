@@ -139,9 +139,18 @@ export class AjustesService {
     const proxAjuste = new Date(contrato.proximoAjuste);
     proxAjuste.setMonth(proxAjuste.getMonth() + contrato.frecuenciaAjuste);
 
+    const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     await this.prisma.$transaction([
       this.prisma.contratoAlquiler.update({ where: { id: contrato.id }, data: { montoMensual: montoNuevo, proximoAjuste: proxAjuste } }),
       this.prisma.historialAjuste.create({ data: { contratoId: contrato.id, fechaAjuste: new Date(), montoAnterior, montoNuevo, porcentaje, tipoAjuste: contrato.tipoAjuste, detalle } }),
+      this.prisma.pagoAlquiler.updateMany({
+        where: {
+          contratoId: contrato.id,
+          estado: { in: ['PENDIENTE', 'ATRASADO'] },
+          fechaVence: { gte: hoy },
+        },
+        data: { monto: montoNuevo },
+      }),
     ]);
     return { montoAnterior, montoNuevo, porcentaje, detalle };
   }

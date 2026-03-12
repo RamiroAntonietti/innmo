@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-export type AuditAccion = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGIN_FAILED' | 'PAGO' | 'ANULAR' | 'SOFT_DELETE' | 'RESTORE';
+export type AuditAccion = 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGIN_FAILED' | 'PAGO' | 'ANULAR' | 'SOFT_DELETE' | 'RESTORE' | 'ENVIAR_AFIP' | 'DEPOSITO_DEVUELTO' | 'DEPOSITO_RETENIDO' | 'RENOVAR';
 
 @Injectable()
 export class AuditService {

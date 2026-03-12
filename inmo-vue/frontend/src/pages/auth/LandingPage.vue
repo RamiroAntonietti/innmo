@@ -18,6 +18,7 @@
           </a>
         </div>
         <div class="nav-actions">
+          <a href="/portal" class="btn-outline-nav">Portal inquilinos</a>
           <button @click="scrollTo('login')" class="btn-outline-nav">Iniciar sesión</button>
           <button @click="scrollTo('contratar')" class="btn-cta-nav">Contratar →</button>
           <button class="hamburger" @click="menuOpen = !menuOpen">
@@ -37,7 +38,7 @@
       <div class="hero-content">
         <div class="hero-badge">✦ Sistema de gestión inmobiliaria</div>
         <h1 class="hero-title">
-          Gestión tu<br/>
+          Gestioná tu<br/>
           inmobiliaria <span class="hero-sin">sin</span><br/>
           <span class="hero-comp">complicaciones</span>
         </h1>
@@ -475,7 +476,7 @@ const registrar = async () => {
       tenant: { nombre: regForm.value.tenantNombre, email: regForm.value.tenantEmail },
       admin: { nombre: regForm.value.nombre, apellido: regForm.value.apellido, email: regForm.value.adminEmail, password: regForm.value.password },
     });
-    if (data.token) { auth.setSession(data); router.push('/app/dashboard'); }
+    if (data.token) { auth.setSession(data.token, data.usuario, data.tenant); router.push('/app/dashboard'); }
     else { registroExito.value = true; }
   } catch (e) {
     const msg = e.response?.data?.message || e.response?.data?.error || 'Error al registrar';

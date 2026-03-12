@@ -22,7 +22,7 @@
       </div>
       <div v-else class="divide-y divide-gray-50 max-h-72 overflow-y-auto">
         <button
-          v-for="item in items" :key="item.tipo"
+          v-for="item in items" :key="item.id || item.tipo"
           @click="navegar(item.ruta)"
           class="w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 text-left transition-colors"
         >

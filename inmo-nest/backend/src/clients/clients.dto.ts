@@ -1,8 +1,8 @@
 // ── DTOs ──────────────────────────────────────
-import { IsString, IsEmail, IsOptional, IsEnum, MinLength } from 'class-validator';
+import { IsString, IsEmail, IsOptional, IsEnum, IsBoolean, MinLength } from 'class-validator';
 
 export enum TipoCliente { COMPRADOR='COMPRADOR', VENDEDOR='VENDEDOR', INQUILINO='INQUILINO', PROPIETARIO='PROPIETARIO' }
-export enum EstadoCliente { ACTIVO='ACTIVO', PROSPECTO='PROSPECTO', CERRADO='CERRADO' }
+export enum EstadoCliente { ACTIVO='ACTIVO', INACTIVO='INACTIVO', PROSPECTO='PROSPECTO', CERRADO='CERRADO' }
 
 export class CreateClientDto {
   @IsString() @MinLength(2) nombre: string;
@@ -12,6 +12,11 @@ export class CreateClientDto {
   @IsEnum(TipoCliente) tipo: TipoCliente;
   @IsEnum(EstadoCliente) @IsOptional() estado?: EstadoCliente;
   @IsString() @IsOptional() notas?: string;
+  @IsString() @IsOptional() cuit?: string;
+  @IsString() @IsOptional() razonSocial?: string;
+  @IsString() @IsOptional() condicionIva?: string;
+  @IsString() @IsOptional() domicilioFiscal?: string;
+  @IsBoolean() @IsOptional() requiereFactura?: boolean;
 }
 
 export class UpdateClientDto {
@@ -22,4 +27,9 @@ export class UpdateClientDto {
   @IsEnum(TipoCliente) @IsOptional() tipo?: TipoCliente;
   @IsEnum(EstadoCliente) @IsOptional() estado?: EstadoCliente;
   @IsString() @IsOptional() notas?: string;
+  @IsString() @IsOptional() cuit?: string;
+  @IsString() @IsOptional() razonSocial?: string;
+  @IsString() @IsOptional() condicionIva?: string;
+  @IsString() @IsOptional() domicilioFiscal?: string;
+  @IsBoolean() @IsOptional() requiereFactura?: boolean;
 }

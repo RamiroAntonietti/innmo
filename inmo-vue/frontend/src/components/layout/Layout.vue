@@ -46,8 +46,48 @@
       </div>
 
       <nav class="flex-1 p-3 sm:p-4 space-y-0.5 overflow-y-auto overflow-x-hidden">
-        <template v-for="item in navItems" :key="item.to">
-          <RouterLink v-if="item.hasAccess"
+        <template v-for="item in navItems" :key="item.to || item.id">
+          <!-- Dropdown -->
+          <div v-if="item.type === 'dropdown'" class="mb-1">
+            <button
+              type="button"
+              @click="dropdownAbierto = dropdownAbierto === item.id ? null : item.id"
+              class="w-full flex items-center justify-between gap-2 px-3 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 min-h-[44px] touch-manipulation"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <component :is="item.icon" :size="17" class="flex-shrink-0" />
+                <span class="truncate">{{ item.label }}</span>
+              </div>
+              <ChevronDown v-if="dropdownAbierto === item.id" :size="16" class="flex-shrink-0 text-gray-400 rotate-180" />
+              <ChevronRight v-else :size="16" class="flex-shrink-0 text-gray-400" />
+            </button>
+            <div v-if="dropdownAbierto === item.id" class="ml-6 mt-0.5 space-y-0.5 border-l-2 border-gray-100 pl-3">
+              <template v-for="child in item.children" :key="child.to">
+                <RouterLink
+                  v-if="child.hasAccess"
+                  :to="child.to"
+                  class="flex items-center gap-2 py-2.5 px-2 rounded-lg text-sm transition-colors min-h-[40px] touch-manipulation"
+                  :class="isActive(child.to) ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
+                  @click="sidebarOpen = false"
+                >
+                  <component :is="child.icon" :size="15" class="flex-shrink-0" />
+                  <span class="truncate">{{ child.label }}</span>
+                </RouterLink>
+                <button
+                  v-else
+                  type="button"
+                  @click="planStore.openUpgradeModal(child.planModule)"
+                  class="w-full flex items-center gap-2 py-2.5 px-2 rounded-lg text-sm text-gray-300 hover:bg-gray-50 cursor-pointer min-h-[40px] touch-manipulation text-left"
+                >
+                  <component :is="child.icon" :size="15" class="flex-shrink-0" />
+                  <span class="truncate">{{ child.label }}</span>
+                  <Lock :size="11" class="flex-shrink-0 ml-auto" />
+                </button>
+              </template>
+            </div>
+          </div>
+          <!-- Link simple -->
+          <RouterLink v-else-if="item.hasAccess"
             :to="item.to"
             class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors min-h-[44px] touch-manipulation"
             :class="isActive(item.to) ? 'bg-primary-50 text-primary-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 active:bg-gray-100'"
@@ -118,7 +158,7 @@ import UpgradeModal from '../common/UpgradeModal.vue';
 import {
   LayoutDashboard, Users, Building2, FileText, TrendingUp,
   BarChart2, LogOut, Home, DollarSign, FileSpreadsheet, Shield,
-  Receipt, CheckSquare, FilePlus, Zap, Lock, Menu, X
+  Receipt, CheckSquare, FilePlus, Zap, Lock, Menu, X, Settings, FileCheck, MessageCircle, ClipboardList, ChevronDown, ChevronRight
 } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
@@ -129,8 +169,20 @@ const router = useRouter();
 const { user, tenant } = auth;
 
 const sidebarOpen = ref(false);
+const dropdownAbierto = ref(null); // 'propiedades' | 'generar' | 'configuracion'
 
-watch(() => route.path, () => { sidebarOpen.value = false; });
+watch(() => route.path, (path) => {
+  sidebarOpen.value = false;
+  if (path.startsWith('/app/configuracion') || path.startsWith('/app/users') || path.startsWith('/app/migration')) {
+    dropdownAbierto.value = 'configuracion';
+  } else if (path.startsWith('/app/presupuestos') || path.startsWith('/app/contracts')) {
+    dropdownAbierto.value = 'generar';
+  } else if (path.startsWith('/app/properties') || path.startsWith('/app/rentals') || path.startsWith('/app/expenses') || path.startsWith('/app/service-invoices')) {
+    dropdownAbierto.value = 'propiedades';
+  } else {
+    dropdownAbierto.value = null;
+  }
+}, { immediate: true });
 
 onMounted(async () => {
   if (!planStore.loaded) await planStore.fetchPlan();
@@ -148,21 +200,48 @@ const navItems = computed(() => {
   const items = [
     { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard', hasAccess: true },
     { to: '/app/clients',   icon: Users,           label: 'Clientes',   hasAccess: true },
-    { to: '/app/properties',icon: Building2,        label: 'Propiedades',hasAccess: true },
-    { to: '/app/rentals',   icon: FileText,         label: 'Alquileres', hasAccess: true },
-    { to: '/app/cobros',    icon: DollarSign,       label: 'Cobros',     hasAccess: true },
-    { to: '/app/gastos',    icon: Receipt,          label: 'Gastos',     hasAccess: hm('gastos'),   planModule: 'gastos' },
-    { to: '/app/facturas',  icon: Zap,              label: 'Facturas',   hasAccess: hm('facturas'), planModule: 'facturas' },
-    { to: '/app/tareas',    icon: CheckSquare,      label: 'Tareas',     hasAccess: true },
-    { to: '/app/contratos', icon: FilePlus,         label: 'Contratos PDF', hasAccess: true },
-    { to: '/app/sales',     icon: TrendingUp,       label: 'Ventas',     hasAccess: hm('ventas'),   planModule: 'ventas' },
+    {
+      type: 'dropdown',
+      id: 'propiedades',
+      label: 'Propiedades',
+      icon: Building2,
+      children: [
+        { to: '/app/properties', label: 'Propiedades', icon: Building2, hasAccess: true },
+        { to: '/app/rentals', label: 'Alquileres', icon: FileText, hasAccess: true },
+        { to: '/app/service-invoices', label: 'Servicios por propiedad', icon: Zap, hasAccess: hm('facturas'), planModule: 'facturas' },
+        { to: '/app/expenses', label: 'Gastos por propiedad', icon: Receipt, hasAccess: hm('gastos'), planModule: 'gastos' },
+      ],
+    },
+    { to: '/app/payments',  icon: DollarSign,       label: 'Cobros',     hasAccess: true },
+    { to: '/app/issued-invoices', icon: FileCheck, label: 'Facturas a clientes (AFIP)',  hasAccess: true },
+    { to: '/app/tasks',    icon: CheckSquare,      label: 'Tareas',     hasAccess: true },
+    { to: '/app/inquiries', icon: MessageCircle,   label: 'Consultas portal', hasAccess: true },
+    {
+      type: 'dropdown',
+      id: 'generar',
+      label: 'Generar',
+      icon: FilePlus,
+      children: [
+        { to: '/app/presupuestos', label: 'Presupuestos', icon: ClipboardList, hasAccess: true },
+        { to: '/app/contracts', label: 'Contratos PDF', icon: FilePlus, hasAccess: true },
+      ],
+    },
   ];
 
   if (isAdmin) {
     items.push(
-      { to: '/app/metricas', icon: BarChart2,       label: 'Métricas',   hasAccess: true },
-      { to: '/app/usuarios', icon: Shield,           label: 'Usuarios',   hasAccess: true },
-      { to: '/app/migracion',icon: FileSpreadsheet, label: 'Migración Excel', hasAccess: hm('migracion_excel'), planModule: 'migracion_excel' },
+      { to: '/app/metrics', icon: BarChart2, label: 'Métricas', hasAccess: true },
+      {
+        type: 'dropdown',
+        id: 'configuracion',
+        label: 'Configuración',
+        icon: Settings,
+        children: [
+          { to: '/app/configuracion', label: 'Configuración del sistema', icon: Settings, hasAccess: true },
+          { to: '/app/users', label: 'Usuarios', icon: Shield, hasAccess: true },
+          { to: '/app/migration', label: 'Migración Excel', icon: FileSpreadsheet, hasAccess: hm('migracion_excel'), planModule: 'migracion_excel' },
+        ],
+      },
     );
   }
 

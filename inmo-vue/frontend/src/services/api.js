@@ -16,10 +16,11 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      const isLoginRequest = err.config?.url?.includes('/auth/login');
-      if (!isLoginRequest) {
+      const url = err.config?.url || '';
+      const isAuthRequest = url.includes('/auth/login') || url.includes('/portal/auth/login');
+      if (!isAuthRequest) {
         localStorage.removeItem('token');
-        window.location.href = '/login';
+        window.location.href = '/';
       }
     }
     return Promise.reject(err);

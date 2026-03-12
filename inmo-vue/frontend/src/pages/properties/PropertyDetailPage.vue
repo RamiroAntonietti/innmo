@@ -2,7 +2,7 @@
   <div>
     <!-- Header -->
     <div class="flex items-center gap-3 mb-6">
-      <button @click="$router.push('/properties')" class="btn-secondary flex items-center gap-2 text-sm">
+      <button @click="$router.push('/app/properties')" class="btn-secondary flex items-center gap-2 text-sm">
         <ArrowLeft :size="16" /> Volver
       </button>
       <div class="flex-1">
@@ -12,9 +12,14 @@
       <span v-if="propiedad" :class="estadoClass(propiedad.estado)" class="text-sm px-3 py-1 rounded-full font-medium">
         {{ propiedad.estado }}
       </span>
-      <button @click="openEdit" class="btn-secondary flex items-center gap-2 text-sm">
-        <Pencil :size="14" /> Editar
-      </button>
+      <div class="flex gap-2">
+        <button @click="$router.push(`/app/presupuestos?propiedadId=${route.params.id}`)" class="btn-secondary flex items-center gap-2 text-sm">
+          <FileText :size="14" /> Crear presupuesto
+        </button>
+        <button @click="openEdit" class="btn-secondary flex items-center gap-2 text-sm">
+          <Pencil :size="14" /> Editar
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="text-center py-20 text-gray-400">Cargando...</div>
@@ -60,9 +65,44 @@
           <p class="text-gray-600 text-sm leading-relaxed">{{ propiedad.descripcion || 'Sin descripción.' }}</p>
         </div>
 
-        <!-- Facturas de la propiedad -->
+        <!-- Inventario (solo si amueblada) -->
+        <div v-if="propiedad.amueblada" class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold text-gray-900 flex items-center gap-2"><Package :size="16" /> Inventario</h2>
+            <button v-if="!agregandoItem" @click="agregandoItem = true" class="btn-primary text-sm py-1.5 px-3 flex items-center gap-1.5">
+              <Plus :size="14" /> Agregar ítem
+            </button>
+          </div>
+          <div v-if="agregandoItem" class="flex gap-2 mb-4 p-3 rounded-xl bg-gray-50">
+            <input v-model="nuevoItem.nombre" class="input flex-1 text-sm" placeholder="Ej: Sofá cama" @keydown.enter.prevent="guardarItem" />
+            <input v-model.number="nuevoItem.cantidad" type="number" min="1" class="input w-16 text-sm" />
+            <select v-model="nuevoItem.estado" class="input w-28 text-sm">
+              <option value="BUENO">Bueno</option>
+              <option value="REGULAR">Regular</option>
+              <option value="DETERIORADO">Deteriorado</option>
+            </select>
+            <button @click="guardarItem" :disabled="guardandoItem" class="btn-primary text-sm py-1.5 px-3">Guardar</button>
+            <button @click="agregandoItem = false; nuevoItem = { nombre: '', cantidad: 1, estado: 'BUENO' }" class="btn-secondary text-sm py-1.5 px-3">Cancelar</button>
+          </div>
+          <div v-if="inventario.length" class="space-y-2">
+            <div v-for="item in inventario" :key="item.id" class="flex items-center justify-between p-3 rounded-xl bg-gray-50 text-sm">
+              <div>
+                <span class="font-medium">{{ item.nombre }}</span>
+                <span class="text-gray-500 ml-2">× {{ item.cantidad }}</span>
+                <span :class="estadoInventarioClass(item.estado)" class="ml-2 text-xs px-2 py-0.5 rounded-full">{{ item.estado }}</span>
+                <span v-if="item.observaciones" class="text-gray-500 text-xs ml-2">— {{ item.observaciones }}</span>
+              </div>
+              <button @click="eliminarItem(item)" class="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                <Trash2 :size="14" />
+              </button>
+            </div>
+          </div>
+          <p v-else-if="!agregandoItem" class="text-gray-400 text-sm">Sin ítems. Agregá muebles para entregar al inquilino.</p>
+        </div>
+
+        <!-- Servicios por propiedad -->
         <div class="card p-5">
-          <h2 class="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Zap :size="15" /> Facturas de servicios</h2>
+          <h2 class="font-semibold text-gray-900 mb-3 flex items-center gap-2"><Zap :size="15" /> Servicios por propiedad</h2>
           <div v-if="facturas.length" class="space-y-2">
             <div v-for="f in facturas" :key="f.id" class="flex items-center justify-between text-sm p-3 rounded-xl bg-gray-50"
               :class="esVencida(f) ? 'border border-red-200 bg-red-50' : ''">
@@ -72,8 +112,8 @@
               <span :class="estadoFactura(f.estado)" class="text-xs px-2 py-0.5 rounded-full">{{ f.estado }}</span>
             </div>
           </div>
-          <p v-else class="text-gray-400 text-sm">Sin facturas registradas.</p>
-          <button @click="$router.push('/facturas')" class="btn-secondary text-xs mt-3">Ver todas las facturas →</button>
+          <p v-else class="text-gray-400 text-sm">Sin servicios registrados.</p>
+          <button @click="$router.push('/app/service-invoices')" class="btn-secondary text-xs mt-3">Ver todos los servicios →</button>
         </div>
       </div>
 
@@ -88,8 +128,8 @@
               <span class="font-medium">{{ propiedad.tipoOperacion }}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-500">Precio</span>
-              <span class="font-bold text-primary-600 text-lg">${{ formatMonto(propiedad.precio) }}</span>
+              <span class="text-gray-500">{{ propiedad.tipoOperacion === 'ALQUILER' ? 'Precio mensual' : 'Precio total' }}</span>
+              <span class="font-bold text-primary-600 text-lg">${{ formatMonto(propiedad.precio) }}{{ propiedad.tipoOperacion === 'ALQUILER' ? '/mes' : '' }}</span>
             </div>
             <div v-if="propiedad.dormitorios" class="flex justify-between">
               <span class="text-gray-500">🛏 Dormitorios</span>
@@ -167,7 +207,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowLeft, Pencil, Upload, X, Image as ImageIcon, Zap, Phone, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { ArrowLeft, Pencil, Upload, X, Image as ImageIcon, Zap, Phone, ChevronLeft, ChevronRight, Package, Plus, Trash2, FileText } from 'lucide-vue-next';
 import { createClient } from '@supabase/supabase-js';
 import api from '../../services/api.js';
 import { useAuthStore } from '../../stores/auth.js';
@@ -180,7 +220,11 @@ const propiedad = ref(null);
 const imagenes = ref([]);
 const facturas = ref([]);
 const contratos = ref([]);
+const inventario = ref([]);
 const loading = ref(true);
+const agregandoItem = ref(false);
+const guardandoItem = ref(false);
+const nuevoItem = ref({ nombre: '', cantidad: 1, estado: 'BUENO' });
 const uploading = ref(false);
 const uploadError = ref('');
 const imagenSeleccionada = ref(null);
@@ -191,6 +235,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const estadoClass = (e) => ({ DISPONIBLE: 'badge-green', RESERVADO: 'badge-yellow', ALQUILADO: 'badge-blue', VENDIDO: 'badge-gray' }[e] || 'badge-gray');
+const estadoInventarioClass = (e) => ({ BUENO: 'bg-green-100 text-green-700', REGULAR: 'bg-amber-100 text-amber-700', DETERIORADO: 'bg-red-100 text-red-700' }[e] || '');
 const estadoFactura = (e) => ({ PENDIENTE: 'bg-yellow-50 text-yellow-700', PAGADO: 'bg-green-50 text-green-700', VENCIDO: 'bg-red-50 text-red-700' }[e] || '');
 const tipoEmoji = (t) => ({ LUZ: '💡', GAS: '🔥', AGUA: '💧', INTERNET: '🌐', EXPENSAS: '🏢', TELEFONO: '📞', OTRO: '📄' }[t] || '📄');
 const formatMonto = (m) => parseFloat(m || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 });
@@ -211,6 +256,7 @@ const fetchPropiedad = async () => {
     const p = propRes.data.data || propRes.data;
     propiedad.value = p;
     imagenes.value = p.imagenes || [];
+    inventario.value = p.inventario || [];
     facturas.value = facturasRes.data.data || facturasRes.data;
     const allContratos = (contratosRes.data.data || contratosRes.data);
     const d = allContratos.data || allContratos;
@@ -262,7 +308,32 @@ const eliminarImagen = async (img) => {
   }
 };
 
-const openEdit = () => router.push(`/properties?edit=${route.params.id}`);
+const openEdit = () => router.push(`/app/properties?edit=${route.params.id}`);
+
+const guardarItem = async () => {
+  if (!nuevoItem.value.nombre?.trim()) return;
+  guardandoItem.value = true;
+  try {
+    const { data } = await api.post(`/properties/${route.params.id}/inventario`, nuevoItem.value);
+    inventario.value.push(data.data || data);
+    agregandoItem.value = false;
+    nuevoItem.value = { nombre: '', cantidad: 1, estado: 'BUENO' };
+  } catch (e) {
+    alert(e.response?.data?.error || 'Error al agregar ítem');
+  } finally {
+    guardandoItem.value = false;
+  }
+};
+
+const eliminarItem = async (item) => {
+  if (!confirm(`¿Eliminar "${item.nombre}" del inventario?`)) return;
+  try {
+    await api.delete(`/properties/${route.params.id}/inventario/${item.id}`);
+    inventario.value = inventario.value.filter(i => i.id !== item.id);
+  } catch (e) {
+    alert(e.response?.data?.error || 'Error al eliminar');
+  }
+};
 
 onMounted(fetchPropiedad);
 </script>

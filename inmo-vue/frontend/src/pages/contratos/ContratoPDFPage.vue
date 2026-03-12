@@ -74,10 +74,13 @@
 
         <!-- Preview -->
         <div class="card p-6 font-serif text-sm text-gray-800 leading-relaxed" style="min-height: 600px;">
-          <div class="text-center mb-6">
-            <p class="text-xs text-gray-400 mb-1">{{ contrato.tenant?.nombre }}</p>
-            <h2 class="text-lg font-bold uppercase tracking-wide">{{ doc.titulo }}</h2>
-            <p class="text-xs text-gray-500 mt-1">{{ doc.lugarFecha }}</p>
+          <div class="flex items-start gap-3 mb-6">
+            <img v-if="logoUrl" :src="logoUrl" alt="Logo" class="w-14 h-14 object-contain flex-shrink-0" />
+            <div class="text-center flex-1">
+              <p class="text-xs text-gray-400 mb-1">{{ contrato.tenant?.nombre }}</p>
+              <h2 class="text-lg font-bold uppercase tracking-wide">{{ doc.titulo }}</h2>
+              <p class="text-xs text-gray-500 mt-1">{{ doc.lugarFecha }}</p>
+            </div>
           </div>
 
           <div class="border-t border-gray-200 pt-4 space-y-4">
@@ -126,6 +129,11 @@
               <p class="text-xs whitespace-pre-line">{{ doc.adicionales }}</p>
             </div>
 
+            <div v-if="doc.inventario">
+              <p class="text-xs font-bold uppercase text-gray-500 mb-1">Inventario (propiedad amueblada)</p>
+              <p class="text-xs whitespace-pre-line">{{ doc.inventario }}</p>
+            </div>
+
             <!-- Firmas -->
             <div class="grid grid-cols-2 gap-8 mt-8 pt-6 border-t border-gray-200">
               <div class="text-center text-xs">
@@ -160,9 +168,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { FileText, Edit3, Download } from 'lucide-vue-next';
 import api from '../../services/api.js';
+import { addLogoToPdf } from '../../composables/usePdfLogo.js';
+import { useAuthStore } from '../../stores/auth.js';
+
+const auth = useAuthStore();
+const logoUrl = computed(() => auth.tenant?.logoUrl || null);
 
 const contratos = ref([]);
 const contratoId = ref('');
@@ -179,6 +192,7 @@ const doc = ref({
   ajuste: '',
   obligaciones: '',
   adicionales: '',
+  inventario: '',
 });
 
 const fetchContratos = async () => {
@@ -221,6 +235,11 @@ const rellenarDoc = (c) => {
       : '',
     obligaciones: `El LOCATARIO se obliga a:\n- Pagar el alquiler en tiempo y forma.\n- Mantener el inmueble en buen estado de conservación.\n- No realizar modificaciones sin consentimiento escrito del LOCADOR.\n- No ceder ni sublocar total ni parcialmente el inmueble.\n- Permitir inspecciones periódicas con previo aviso de 48 horas.`,
     adicionales: '',
+    inventario: c.propiedad?.amueblada && c.propiedad?.inventario?.length
+      ? 'INVENTARIO DE MOBILIARIO Y ELEMENTOS ENTREGADOS:\n' + c.propiedad.inventario
+          .map(i => `• ${i.nombre} (cantidad: ${i.cantidad}, estado: ${i.estado}${i.observaciones ? ` — ${i.observaciones}` : ''})`)
+          .join('\n')
+      : '',
   };
 };
 
@@ -254,13 +273,16 @@ const generarPDF = async () => {
       y += 4;
     };
 
-    // Encabezado
+    // Encabezado con logo (arriba a la izquierda)
     pdf.setFillColor(245, 247, 250);
     pdf.rect(0, 0, 210, 28, 'F');
+    await addLogoToPdf(pdf, null, { x: margen, y: 4, maxWidth: 20, maxHeight: 20 });
+    const nombreInmo = contrato.value?.tenant?.nombre || auth.tenant?.nombre || 'INMOBILIARIA';
+    const logoOffset = auth.tenant?.logoUrl ? margen + 24 : margen;
     pdf.setFontSize(8);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(120, 120, 120);
-    pdf.text(contrato.value?.tenant?.nombre || 'INMOBILIARIA', margen, 10);
+    pdf.text(nombreInmo, logoOffset, 10);
     y = 15;
     linea(doc.value.titulo, 16, true, [30, 30, 30]);
     pdf.setFontSize(8);
@@ -312,6 +334,7 @@ const generarPDF = async () => {
     if (doc.value.ajuste) seccion('CLÁUSULA DE AJUSTE', doc.value.ajuste);
     seccion('OBLIGACIONES DEL LOCATARIO', doc.value.obligaciones);
     if (doc.value.adicionales) seccion('CLÁUSULAS ADICIONALES', doc.value.adicionales);
+    if (doc.value.inventario) seccion('INVENTARIO (PROPIEDAD AMUEBLADA)', doc.value.inventario);
 
     // Firmas
     if (y > 230) { pdf.addPage(); y = margen; }

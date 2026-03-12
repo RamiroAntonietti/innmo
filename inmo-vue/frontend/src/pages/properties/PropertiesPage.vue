@@ -40,14 +40,15 @@
           <span v-if="p.dormitorios">🛏 {{ p.dormitorios }}</span>
           <span v-if="p.banos">🚿 {{ p.banos }}</span>
           <span v-if="p.metrosCuadrados">📐 {{ p.metrosCuadrados }}m²</span>
+          <span v-if="p.amueblada" class="text-amber-600">🪑 Amueblada</span>
         </div>
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs text-gray-400">{{ p.tipoOperacion }}</p>
-            <p class="text-lg font-bold text-primary-600">${{ formatMonto(p.precio) }}</p>
+            <p class="text-lg font-bold text-primary-600">${{ formatMonto(p.precio) }}{{ p.tipoOperacion === 'ALQUILER' ? '/mes' : '' }}</p>
           </div>
           <div class="flex gap-2">
-            <button @click="router.push('/properties/' + p.id)" class="btn-secondary text-xs py-1.5 px-3"><Eye :size="12" /></button>
+            <button @click="router.push('/app/properties/' + p.id)" class="btn-secondary text-xs py-1.5 px-3"><Eye :size="12" /></button>
             <button @click="openModal(p)" class="btn-secondary text-xs py-1.5 px-3"><Pencil :size="12" /></button>
             <button v-if="isAdmin" @click="eliminar(p)" class="btn-secondary text-xs py-1.5 px-3 text-red-500"><Trash2 :size="12" /></button>
           </div>
@@ -78,7 +79,10 @@
                 <option value="VENTA">Venta</option>
               </select>
             </div>
-            <div><label class="label">Precio</label><input v-model.number="form.precio" type="number" min="0" class="input" required /></div>
+            <div>
+              <label class="label">{{ form.tipoOperacion === 'ALQUILER' ? 'Precio mensual' : 'Precio total' }}</label>
+              <input v-model.number="form.precio" type="number" min="0" class="input" required :placeholder="form.tipoOperacion === 'ALQUILER' ? 'Monto por mes' : 'Precio de venta'" />
+            </div>
           </div>
           <div class="grid grid-cols-3 gap-3">
             <div><label class="label">Dormitorios</label><input v-model.number="form.dormitorios" type="number" min="0" class="input" /></div>
@@ -103,6 +107,10 @@
             <select v-model="form.estado" class="input">
               <option v-for="e in estados" :key="e" :value="e">{{ e }}</option>
             </select>
+          </div>
+          <div v-if="form.tipoOperacion === 'ALQUILER'" class="flex items-center gap-2">
+            <input v-model="form.amueblada" type="checkbox" id="amueblada" class="rounded border-gray-300" />
+            <label for="amueblada" class="text-sm text-gray-600">Propiedad amueblada</label>
           </div>
           <p v-if="formError" class="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{{ formError }}</p>
           <div class="flex gap-3 pt-2">
@@ -163,7 +171,7 @@ const filtroTipo = ref('');
 const filtroEstado = ref('');
 const estados = ['DISPONIBLE', 'RESERVADO', 'ALQUILADO', 'VENDIDO'];
 
-const defaultForm = () => ({ titulo: '', descripcion: '', direccion: '', ciudad: '', precio: 0, tipoOperacion: 'ALQUILER', estado: 'DISPONIBLE', dormitorios: null, banos: null, metrosCuadrados: null, propietarioId: '' });
+const defaultForm = () => ({ titulo: '', descripcion: '', direccion: '', ciudad: '', precio: 0, tipoOperacion: 'ALQUILER', estado: 'DISPONIBLE', dormitorios: null, banos: null, metrosCuadrados: null, propietarioId: '', amueblada: false });
 const form = ref(defaultForm());
 const formPropietario = ref({ nombre: '', apellido: '', email: '', telefono: '' });
 
@@ -194,13 +202,20 @@ const openModal = async (p) => {
 };
 
 const guardar = async () => {
+  if (!form.value.propietarioId) {
+    formError.value = 'Seleccioná un propietario.';
+    return;
+  }
   saving.value = true; formError.value = '';
   try {
     if (editando.value) await api.put(`/properties/${editando.value.id}`, form.value);
     else await api.post('/properties', form.value);
     modal.value = false;
     fetchProps();
-  } catch (e) { formError.value = e.response?.data?.error || 'Error al guardar'; }
+  } catch (e) {
+    const msg = e.response?.data?.message;
+    formError.value = Array.isArray(msg) ? msg.join(' · ') : (e.response?.data?.error || msg || 'Error al guardar');
+  }
   finally { saving.value = false; }
 };
 

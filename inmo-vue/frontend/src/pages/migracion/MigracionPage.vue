@@ -140,7 +140,7 @@ const entidades = [
       { nombre: 'email', desc: 'Correo electrónico', requerido: false },
       { nombre: 'telefono', desc: 'Número de teléfono', requerido: false },
       { nombre: 'tipo', desc: 'INQUILINO o PROPIETARIO', requerido: true },
-      { nombre: 'estado', desc: 'ACTIVO, INACTIVO o POTENCIAL', requerido: false },
+      { nombre: 'estado', desc: 'ACTIVO, INACTIVO, PROSPECTO o CERRADO', requerido: false },
       { nombre: 'dni', desc: 'Documento de identidad', requerido: false },
       { nombre: 'direccion', desc: 'Dirección del cliente', requerido: false },
     ]
@@ -200,7 +200,7 @@ const exportaciones = [
   { key: 'contratos', label: 'Contratos', emoji: '📄', desc: 'Contratos de alquiler activos e históricos', endpoint: '/rentals', params: { limit: 5000 } },
   { key: 'gastos', label: 'Gastos', emoji: '💸', desc: 'Historial de gastos por propiedad', endpoint: '/gastos', params: { limit: 5000 } },
   { key: 'tareas', label: 'Tareas', emoji: '✅', desc: 'Todas tus tareas y recordatorios', endpoint: '/tareas', params: {} },
-  { key: 'facturas', label: 'Facturas servicios', emoji: '⚡', desc: 'Facturas de servicios por propiedad', endpoint: '/facturas', params: {} },
+  { key: 'facturas', label: 'Servicios por propiedad', emoji: '⚡', desc: 'Luz, gas, expensas y otros servicios de la propiedad', endpoint: '/facturas', params: {} },
 ];
 
 const descargarPlantilla = () => {
