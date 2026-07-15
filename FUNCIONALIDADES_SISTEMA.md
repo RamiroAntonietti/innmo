@@ -249,36 +249,7 @@ Sistema de gestión inmobiliaria SaaS (backend NestJS, frontend Vue 3, PostgreSQ
 
 ---
 
-## 25. API resumida (endpoints principales)
 
-| Módulo | Método | Ruta | Descripción |
-|--------|--------|------|-------------|
-| Auth | POST | /auth/register | Registro |
-| Auth | POST | /auth/login | Login |
-| Auth | GET | /auth/me | Usuario actual |
-| Clients | CRUD | /clients | Clientes |
-| Properties | CRUD | /properties | Propiedades |
-| Properties | POST/DELETE | /properties/imagenes | Imágenes |
-| Rentals | CRUD | /rentals | Contratos |
-| Rentals | GET | /rentals/:id | Contrato individual |
-| Rentals | GET | /rentals/:id/payments | Pagos del contrato |
-| Rentals | POST | /rentals/:id/payments | Registrar pago |
-| Rentals | POST | /rentals/:id/anular | Anular |
-| Rentals | PATCH | /rentals/:id/deposito/devolver | Depósito |
-| Rentals | POST | /rentals/:id/renovar | Renovar |
-| Ajustes | POST | /ajustes/contratos/:id/ajuste/ejecutar | Ejecutar ajuste |
-| Dashboard | GET | /dashboard/stats | Estadísticas |
-| Dashboard | GET | /dashboard/notificaciones | Notificaciones |
-| Consultas | CRUD | /consultas | Consultas portal |
-| Gastos | CRUD | /gastos | Gastos |
-| Facturas | CRUD | /facturas | Servicios por propiedad |
-| FacturasEmitidas | CRUD | /facturas-emitidas | Facturas AFIP |
-| Tareas | CRUD | /tareas | Tareas |
-| Usuarios | CRUD | /usuarios | Usuarios |
-| Tenant | GET/PUT | /tenant | Datos tenant |
-| Portal | * | /portal/* | Endpoints del portal |
-| Mercado Pago | POST | /portal/pago-mp/crear-preference | Crear pago |
-| Mercado Pago | POST | /portal/pago-mp/webhook | Webhook MP |
 
 ---
 
