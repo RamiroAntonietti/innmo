@@ -190,15 +190,16 @@ export class RentalsService {
 
     // Crear acceso al portal para el inquilino (si tiene email y no tiene acceso)
     let portalAcceso: { email: string; password: string } | null = null;
+    let portalAccesoError: string | null = null;
     if (inquilino.email) {
       try {
         portalAcceso = await this.portal.crearAccesoParaInquilino(tenantId, dto.inquilinoId);
-      } catch {
-        // Si falla (ej. tabla portal_accesos no existe), el contrato se crea igual
+      } catch (err) {
+        portalAccesoError = err?.message || 'No se pudo crear el acceso al portal del inquilino.';
       }
     }
 
-    return { ...contrato, portalAcceso };
+    return { ...contrato, portalAcceso, portalAccesoError };
   }
 
   async registerPayment(tenantId: string, contratoId: string, dto: RegisterPaymentDto, usuarioId?: string) {

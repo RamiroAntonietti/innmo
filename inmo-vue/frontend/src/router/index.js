@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth.js';
 import { usePortalAuthStore } from '../stores/portalAuth.js';
 
 const routes = [
-  { path: '/', component: () => import('../pages/auth/LandingPage.vue'), meta: { public: true } },
+  { path: '/', component: () => import('../pages/auth/LoginPage.vue'), meta: { public: true } },
   { path: '/login', redirect: '/' },
   { path: '/registro', redirect: '/' },
   {

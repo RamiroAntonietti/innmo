@@ -3,9 +3,9 @@
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <FileText :size="24" class="text-primary-500" /> Facturas a clientes (AFIP)
+          <FileText :size="24" class="text-primary-500" /> Facturas a clientes
         </h1>
-        <p class="text-gray-500 text-sm mt-1">Comprobantes fiscales electrónicos para clientes</p>
+        <p class="text-gray-500 text-sm mt-1">Comprobantes internos. El envío a AFIP aún no está disponible.</p>
       </div>
       <button @click="openModal()" class="btn-primary flex items-center gap-2">
         <Plus :size="18" /> Nueva factura
@@ -50,7 +50,13 @@
             <td class="px-5 py-4 text-right font-semibold">${{ formatMonto(f.montoTotal) }}</td>
             <td class="px-5 py-4">
               <div class="flex gap-2">
-                <button v-if="f.estado === 'BORRADOR'" @click="enviarAfip(f)" class="btn-secondary text-xs text-blue-600">Enviar AFIP</button>
+                <button
+                  v-if="f.estado === 'BORRADOR'"
+                  type="button"
+                  disabled
+                  title="Integración AFIP pendiente"
+                  class="btn-secondary text-xs text-gray-400 cursor-not-allowed"
+                >AFIP no disponible</button>
                 <button v-if="f.estado === 'BORRADOR'" @click="eliminar(f)" class="btn-secondary text-xs text-red-500">Eliminar</button>
               </div>
             </td>
@@ -181,15 +187,6 @@ const guardar = async () => {
   } catch (e) {
     formError.value = e.response?.data?.error || e.response?.data?.message || 'Error al crear';
   } finally { saving.value = false; }
-};
-
-const enviarAfip = async (f) => {
-  try {
-    await api.post(`/facturas-emitidas/${f.id}/enviar-afip`);
-    fetchFacturas();
-  } catch (e) {
-    alert(e.response?.data?.error || 'Error');
-  }
 };
 
 const eliminar = async (f) => {

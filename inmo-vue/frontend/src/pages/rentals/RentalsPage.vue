@@ -146,6 +146,20 @@
       </div>
     </div>
 
+    <!-- Aviso: contrato OK pero falló acceso portal -->
+    <div v-if="avisoPortalError" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div class="card w-full max-w-md p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-amber-700">Contrato creado</h2>
+          <button @click="avisoPortalError = ''" class="p-1.5 hover:bg-gray-100 rounded-lg"><X :size="18" /></button>
+        </div>
+        <p class="text-sm text-gray-600 mb-2">El contrato se guardó correctamente, pero no se pudo crear el acceso al portal:</p>
+        <p class="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-3">{{ avisoPortalError }}</p>
+        <p class="text-xs text-gray-500 mt-3">Podés crear el acceso manualmente desde Clientes / portal más adelante.</p>
+        <button type="button" class="btn-primary w-full mt-4" @click="avisoPortalError = ''">Entendido</button>
+      </div>
+    </div>
+
     <!-- Modal Ver pagos -->
     <div v-if="modalPagos" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="card w-full max-w-lg p-6 max-h-[85vh] overflow-hidden flex flex-col">
@@ -402,9 +416,11 @@ const openModal = async () => {
 
 const modalCredenciales = ref(null);
 const credencialesPortal = ref(null);
+const avisoPortalError = ref('');
 
 const guardarContrato = async () => {
   saving.value = true; formError.value = '';
+  avisoPortalError.value = '';
   try {
     const { data } = await api.post('/rentals', formContrato.value);
     modalContrato.value = false;
@@ -412,6 +428,8 @@ const guardarContrato = async () => {
     if (data?.portalAcceso) {
       credencialesPortal.value = data.portalAcceso;
       modalCredenciales.value = true;
+    } else if (data?.portalAccesoError) {
+      avisoPortalError.value = data.portalAccesoError;
     }
   } catch (e) {
     const msg = e.response?.data?.message;

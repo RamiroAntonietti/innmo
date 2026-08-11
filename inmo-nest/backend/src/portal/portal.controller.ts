@@ -123,10 +123,11 @@ export class PortalController {
   @Public()
   @Post('pago-mp/webhook')
   webhookMP(@Req() req: any) {
-    const topic = req.query?.topic || req.body?.type;
-    const id = req.query?.id || req.body?.data?.id;
+    this.mpSvc.validarFirmaWebhook(req.headers || {}, req.query || {});
+    const topic = req.query?.topic || req.body?.type || req.body?.action;
+    const id = req.query?.['data.id'] || req.query?.id || req.body?.data?.id;
     if (topic && id) {
-      return this.mpSvc.procesarWebhook(topic, String(id));
+      return this.mpSvc.procesarWebhook(String(topic), String(id));
     }
     return { received: true };
   }

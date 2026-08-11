@@ -213,7 +213,7 @@ const navItems = computed(() => {
       ],
     },
     { to: '/app/payments',  icon: DollarSign,       label: 'Cobros',     hasAccess: true },
-    { to: '/app/issued-invoices', icon: FileCheck, label: 'Facturas a clientes (AFIP)',  hasAccess: true },
+    { to: '/app/issued-invoices', icon: FileCheck, label: 'Facturas a clientes',  hasAccess: true },
     { to: '/app/tasks',    icon: CheckSquare,      label: 'Tareas',     hasAccess: true },
     { to: '/app/inquiries', icon: MessageCircle,   label: 'Consultas portal', hasAccess: true },
     {

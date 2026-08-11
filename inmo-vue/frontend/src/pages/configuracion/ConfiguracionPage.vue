@@ -145,41 +145,15 @@
       </form>
     </div>
 
-    <!-- Tab: Mercado Libre -->
-    <div v-if="tabActivo === 'ml'" class="card p-6 max-w-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4">Mercado Libre</h2>
-      <p class="text-sm text-gray-500 mb-4">Integración para publicar propiedades en Mercado Libre. <em>Próximamente.</em></p>
-      <form @submit.prevent="guardarML" class="space-y-4">
-        <div>
-          <label class="label">App ID</label>
-          <input v-model="formML.mlAppId" class="input" placeholder="123456789" disabled />
-        </div>
-        <div>
-          <label class="label">Client ID</label>
-          <input v-model="formML.mlClientId" class="input" placeholder="123456789" disabled />
-        </div>
-        <div>
-          <label class="label">Client Secret</label>
-          <input v-model="formML.mlClientSecret" type="password" class="input" placeholder="••••••••" disabled />
-        </div>
-        <p class="text-gray-400 text-sm">La integración con Mercado Libre estará disponible en una futura actualización.</p>
-      </form>
-    </div>
-
-    <!-- Tab: Otros -->
-    <div v-if="tabActivo === 'otros'" class="card p-6 max-w-2xl">
-      <h2 class="text-lg font-semibold text-gray-900 mb-4">Otras configuraciones</h2>
-      <p class="text-sm text-gray-500">Más opciones de configuración se agregarán próximamente.</p>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { Settings, Upload } from 'lucide-vue-next';
-import { createClient } from '@supabase/supabase-js';
 import { useAuthStore } from '../../stores/auth.js';
 import api from '../../services/api.js';
+import { getSupabaseClient, isSupabaseConfigured } from '../../services/supabase.js';
 
 const auth = useAuthStore();
 const tenant = ref(null);
@@ -190,15 +164,12 @@ const tabs = [
   { id: 'fiscal', label: 'Datos fiscales' },
   { id: 'comision', label: 'Comisión' },
   { id: 'mp', label: 'Mercado Pago' },
-  { id: 'ml', label: 'Mercado Libre' },
-  { id: 'otros', label: 'Otros' },
 ];
 
 const formDatos = ref({ nombre: '', email: '', telefono: '', direccion: '', sitioWeb: '', logoUrl: '' });
 const formFiscal = ref({ cuit: '', razonSocial: '', condicionIva: '', domicilioFiscal: '', puntoVenta: null });
 const formComision = ref({ comisionPorcentajeAlquiler: null });
 const formMP = ref({ mpAccessToken: '', mpPublicKey: '' });
-const formML = ref({ mlAppId: '', mlClientId: '', mlClientSecret: '' });
 
 const savingDatos = ref(false);
 const savingFiscal = ref(false);
@@ -217,8 +188,6 @@ const condicionesIva = [
   { value: 'EXENTO', label: 'Exento' },
   { value: 'NO_RESPONSABLE', label: 'No Responsable' },
 ];
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
 
 const cargar = async () => {
   const { data } = await api.get('/tenant');
@@ -240,7 +209,6 @@ const cargar = async () => {
   };
   formComision.value = { comisionPorcentajeAlquiler: data.comisionPorcentajeAlquiler ?? null };
   formMP.value = { mpAccessToken: '', mpPublicKey: data.mpPublicKey || '' };
-  formML.value = { mlAppId: data.mlAppId || '', mlClientId: data.mlClientId || '', mlClientSecret: '' };
 };
 
 const guardarDatos = async () => {
@@ -266,8 +234,14 @@ const guardarDatos = async () => {
 const subirLogo = async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
+  if (!isSupabaseConfigured()) {
+    alert('Faltan VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el frontend. Configuralas en .env');
+    e.target.value = '';
+    return;
+  }
   uploadingLogo.value = true;
   try {
+    const supabase = getSupabaseClient();
     const ext = file.name.split('.').pop() || 'png';
     const path = `logos/${auth.tenant?.id}/logo.${ext}`;
     const { error } = await supabase.storage.from('propiedades-imagenes').upload(path, file, { upsert: true });

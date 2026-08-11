@@ -3,6 +3,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { getJwtPortalSecret } from '../common/jwt-secrets';
 
 const PORTAL_ROLES = ['INQUILINO', 'PROPIETARIO'];
 
@@ -19,7 +20,7 @@ export class PortalGuard implements CanActivate {
     if (!auth?.startsWith('Bearer ')) throw new UnauthorizedException('Token requerido.');
 
     try {
-      const secret = process.env.JWT_PORTAL_SECRET || process.env.JWT_SECRET || 'portal-secret';
+      const secret = getJwtPortalSecret();
       const payload = this.jwtService.verify(auth.split(' ')[1], { secret });
       if (!payload.portal) throw new ForbiddenException('Token no válido para el portal.');
       if (!PORTAL_ROLES.includes(payload.rol)) throw new ForbiddenException('Rol no autorizado para el portal.');

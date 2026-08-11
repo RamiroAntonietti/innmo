@@ -3,8 +3,10 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { assertProductionSecrets } from './common/jwt-secrets';
 
 async function bootstrap() {
+  assertProductionSecrets();
   const app = await NestFactory.create(AppModule);
 
   // Security

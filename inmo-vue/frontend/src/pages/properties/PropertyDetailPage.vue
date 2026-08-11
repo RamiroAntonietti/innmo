@@ -208,7 +208,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowLeft, Pencil, Upload, X, Image as ImageIcon, Zap, Phone, ChevronLeft, ChevronRight, Package, Plus, Trash2, FileText } from 'lucide-vue-next';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient, isSupabaseConfigured } from '../../services/supabase.js';
 import api from '../../services/api.js';
 import { useAuthStore } from '../../stores/auth.js';
 
@@ -228,11 +228,6 @@ const nuevoItem = ref({ nombre: '', cantidad: 1, estado: 'BUENO' });
 const uploading = ref(false);
 const uploadError = ref('');
 const imagenSeleccionada = ref(null);
-
-// Supabase client para storage
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const estadoClass = (e) => ({ DISPONIBLE: 'badge-green', RESERVADO: 'badge-yellow', ALQUILADO: 'badge-blue', VENDIDO: 'badge-gray' }[e] || 'badge-gray');
 const estadoInventarioClass = (e) => ({ BUENO: 'bg-green-100 text-green-700', REGULAR: 'bg-amber-100 text-amber-700', DETERIORADO: 'bg-red-100 text-red-700' }[e] || '');
@@ -269,10 +264,16 @@ const fetchPropiedad = async () => {
 const subirImagenes = async (e) => {
   const files = Array.from(e.target.files);
   if (!files.length) return;
+  if (!isSupabaseConfigured()) {
+    uploadError.value = 'Faltan VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el frontend (.env).';
+    e.target.value = '';
+    return;
+  }
   const disponibles = 10 - imagenes.value.length;
   const aSubir = files.slice(0, disponibles);
   uploading.value = true; uploadError.value = '';
   try {
+    const supabase = getSupabaseClient();
     for (const file of aSubir) {
       const ext = file.name.split('.').pop();
       const path = `${auth.tenant?.id}/${route.params.id}/${Date.now()}.${ext}`;
@@ -297,10 +298,12 @@ const subirImagenes = async (e) => {
 const eliminarImagen = async (img) => {
   if (!confirm('¿Eliminar esta foto?')) return;
   try {
-    // Extract path from URL for Supabase storage deletion
-    const url = new URL(img.url);
-    const path = url.pathname.split('/propiedades-imagenes/')[1];
-    if (path) await supabase.storage.from('propiedades-imagenes').remove([path]);
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabaseClient();
+      const url = new URL(img.url);
+      const path = url.pathname.split('/propiedades-imagenes/')[1];
+      if (path) await supabase.storage.from('propiedades-imagenes').remove([path]);
+    }
     await api.delete(`/properties/imagenes/${img.id}`);
     imagenes.value = imagenes.value.filter(i => i.id !== img.id);
   } catch (err) {

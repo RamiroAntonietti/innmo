@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { getJwtPortalSecret } from '../common/jwt-secrets';
 
 @Injectable()
 export class PortalService {
@@ -273,7 +274,7 @@ export class PortalService {
   }
 
   private generatePortalToken(acc: any) {
-    const secret = process.env.JWT_PORTAL_SECRET || process.env.JWT_SECRET || 'portal-secret';
+    const secret = getJwtPortalSecret();
     const expiresIn = process.env.JWT_PORTAL_EXPIRES_IN || process.env.JWT_EXPIRES_IN || '7d';
     return this.jwt.sign(
       {

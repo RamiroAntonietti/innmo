@@ -9,10 +9,10 @@ Sistema de gestión inmobiliaria SaaS (backend NestJS, frontend Vue 3, PostgreSQ
 ## 1. Autenticación y acceso
 
 ### 1.1 Panel administrativo (inmobiliaria)
-- **Registro:** Crear cuenta nueva (tenant + usuario admin) desde la landing.
-- **Login:** Iniciar sesión con email y contraseña. Redirección a `/app/dashboard`.
+- **Login:** Pantalla de inicio de sesión en `/` con email y contraseña. Redirección a `/app/dashboard`.
+- **Registro público:** No expuesto en la UI. Los tenants se crean por seed, operación interna o `POST /auth/register` (API).
 - **Sesión:** JWT almacenado; validación en cada petición.
-- **Reset password:** Solicitar restablecimiento de contraseña por email.
+- **Reset password:** Solo endpoint de desarrollo `POST /auth/reset-password` (bloqueado en producción). Reset por email: pendiente.
 - **Me:** Obtener usuario y tenant actual (`GET /auth/me`).
 
 ### 1.2 Portal de clientes (inquilinos y propietarios)
@@ -102,14 +102,14 @@ Sistema de gestión inmobiliaria SaaS (backend NestJS, frontend Vue 3, PostgreSQ
 
 ---
 
-## 9. Facturas a clientes (AFIP)
+## 9. Facturas a clientes
 
-- **Listar:** Comprobantes fiscales electrónicos emitidos.
+- **Listar:** Comprobantes emitidos (uso interno).
 - **Crear:** Cliente, tipo comprobante, monto, descripción (estado BORRADOR).
 - **Editar:** Modificar borrador.
-- **Enviar a AFIP:** Autorizar comprobante (CAE, fecha vencimiento).
-- **Eliminar:** Borrar borrador o anular.
-- **Integración:** Preparado para AFIP/ARCA (datos fiscales en Tenant).
+- **Enviar a AFIP:** No disponible aún (UI deshabilitada; endpoint responde error claro sin cambiar estado).
+- **Eliminar:** Borrar borrador.
+- **Integración AFIP/ARCA:** Preparada a nivel de datos fiscales en Tenant; envío electrónico pendiente.
 
 ---
 
@@ -227,13 +227,11 @@ Sistema de gestión inmobiliaria SaaS (backend NestJS, frontend Vue 3, PostgreSQ
 
 ---
 
-## 23. Landing pública
+## 23. Acceso público
 
-- **Secciones:** Inicio, funcionalidades, planes, contratar, login.
-- **Registro:** Formulario para crear cuenta (tenant + admin).
-- **Login:** Formulario integrado en la landing.
-- **Portal:** Enlace al portal de inquilinos/propietarios.
-- **Responsive:** Navegación móvil con menú hamburguesa.
+- **Login admin:** `/` — email + contraseña del usuario del tenant.
+- **Portal clientes:** `/portal` — login de inquilinos/propietarios.
+- **Sin landing comercial ni auto-registro** de inmobiliarias en la SPA.
 
 ---
 

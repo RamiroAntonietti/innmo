@@ -5,8 +5,11 @@
 ### 1. Variables de entorno (.env)
 
 ```env
-# Token de acceso de Mercado Pago (Producción o Sandbox)
+# Token de acceso de Mercado Pago (respaldo; preferir token por tenant en Configuración)
 MP_ACCESS_TOKEN="APP_USR-xxxx..."
+
+# Secret de firma del webhook (Tus integraciones → Webhooks). Obligatorio en producción.
+MP_WEBHOOK_SECRET="xxxx..."
 
 # URL pública del API (para webhook - debe ser accesible desde internet)
 API_URL="https://tu-dominio.com"
@@ -19,7 +22,9 @@ Mercado Pago envía notificaciones a:
 POST {API_URL}/api/v1/portal/pago-mp/webhook?topic=payment&id={payment_id}
 ```
 
-En desarrollo local, usá [ngrok](https://ngrok.com) para exponer el puerto y configurar la URL en la preferencia.
+El endpoint valida el header `x-signature` con `MP_WEBHOOK_SECRET` y verifica el pago con el Access Token del tenant (o el global de respaldo).
+
+En desarrollo local, usá [ngrok](https://ngrok.com) para exponer el puerto y configurar la URL en la preferencia. Sin `MP_WEBHOOK_SECRET` la firma se omite solo fuera de producción.
 
 ## Flujo
 

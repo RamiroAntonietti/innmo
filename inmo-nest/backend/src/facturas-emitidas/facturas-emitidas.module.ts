@@ -127,22 +127,12 @@ export class FacturasEmitidasService {
     return updated;
   }
 
-  /** Placeholder: enviar a AFIP/ARCA. Por implementar. */
-  async enviarAfip(tenantId: string, id: string, usuarioId?: string) {
-    const f = await this.findOne(tenantId, id);
-    if (f.estado !== 'BORRADOR') {
-      throw new BadRequestException('Solo se pueden enviar facturas en BORRADOR.');
-    }
-    // TODO: Integración con WSFE/WSBFEV1 de AFIP
-    // Por ahora solo cambia a PENDIENTE_AFIP como placeholder
-    const updated = await this.prisma.facturaEmitida.update({
-      where: { id },
-      data: { estado: 'PENDIENTE_AFIP' },
-    });
-    await this.audit.log({
-      tenantId, usuarioId, accion: 'ENVIAR_AFIP', entidad: 'factura_emitida', entidadId: id,
-    });
-    return { ...updated, mensaje: 'Integración AFIP pendiente de implementación.' };
+  /** AFIP/ARCA aún no integrado: no modifica estado. */
+  async enviarAfip(tenantId: string, id: string, _usuarioId?: string) {
+    await this.findOne(tenantId, id);
+    throw new BadRequestException(
+      'La integración con AFIP aún no está disponible. La factura permanece en BORRADOR.',
+    );
   }
 
   async remove(tenantId: string, id: string, usuarioId?: string) {

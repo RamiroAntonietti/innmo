@@ -12,4 +12,22 @@ Lista de tareas pendientes para implementar más adelante.
 
 ---
 
-*Última actualización: 11/03/2026*
+## 2. Integración AFIP / facturación electrónica
+
+Envío real de comprobantes (CAE) vía WSFE/WSBFEV1. Hoy las facturas a clientes se gestionan como borradores internos.
+
+---
+
+## 3. Integración Mercado Libre
+
+Publicación de propiedades en ML. El scaffold de backend existe; la UI de configuración está oculta hasta que la integración esté operativa.
+
+---
+
+## 4. Reset de contraseña por email
+
+Flujo forgot-password con envío de mail (hoy solo existe reset de desarrollo en API, bloqueado en producción).
+
+---
+
+*Última actualización: 10/08/2026*
