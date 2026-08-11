@@ -238,8 +238,13 @@ const fetchTareas = async () => {
 };
 
 const fetchResumen = async () => {
-  const { data } = await api.get('/tareas/resumen');
-  resumen.value = data.data || data;
+  try {
+    const { data } = await api.get('/tareas/resumen');
+    resumen.value = data.data || data;
+  } catch (e) {
+    console.error(e);
+    resumen.value = { pendientes: 0, enProgreso: 0, vencenHoy: 0, vencidas: 0 };
+  }
 };
 
 const fetchSelectores = async () => {

@@ -124,6 +124,34 @@ export class TareasService {
     return { message: 'Tarea eliminada.' };
   }
 
+  async getResumen(tenantId: string) {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    const [pendientes, enProgreso, vencenHoy, vencidas] = await Promise.all([
+      this.prisma.tarea.count({ where: { tenantId, estado: 'PENDIENTE' } }),
+      this.prisma.tarea.count({ where: { tenantId, estado: 'EN_PROGRESO' } }),
+      this.prisma.tarea.count({
+        where: {
+          tenantId,
+          estado: { in: ['PENDIENTE', 'EN_PROGRESO'] },
+          fechaVence: { gte: hoy, lt: manana },
+        },
+      }),
+      this.prisma.tarea.count({
+        where: {
+          tenantId,
+          estado: { in: ['PENDIENTE', 'EN_PROGRESO'] },
+          fechaVence: { lt: hoy },
+        },
+      }),
+    ]);
+
+    return { pendientes, enProgreso, vencenHoy, vencidas };
+  }
+
   private async marcarVencidas(tenantId: string) {
     await this.prisma.tarea.updateMany({
       where: {
@@ -142,6 +170,9 @@ export class TareasController {
   constructor(private svc: TareasService) {}
 
   @Get() findAll(@TenantId() tid: string, @Query() q: any) { return this.svc.findAll(tid, q); }
+
+  @Get('resumen')
+  resumen(@TenantId() tid: string) { return this.svc.getResumen(tid); }
 
   @Post()
   create(@TenantId() tid: string, @Body() dto: CreateTareaDto, @CurrentUser('sub') uid: string) {

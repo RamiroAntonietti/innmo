@@ -192,6 +192,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { FileText, Plus, Pencil, Trash2, X, Download } from 'lucide-vue-next';
+import { jsPDF } from 'jspdf';
 import { useAuthStore } from '../../stores/auth.js';
 import api from '../../services/api.js';
 import { addLogoToPdf } from '../../composables/usePdfLogo.js';
@@ -374,9 +375,6 @@ const convertir = async () => {
 
 const descargarPDF = async (p) => {
   try {
-    const mod = await import('jspdf');
-    const jsPDF = mod.jsPDF || mod.default?.jsPDF || mod.default;
-    if (!jsPDF) throw new Error('No se pudo cargar la librería PDF (jspdf).');
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const margen = 20;
     const ancho = 210 - margen * 2;

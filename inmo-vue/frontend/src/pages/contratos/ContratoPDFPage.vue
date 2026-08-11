@@ -179,6 +179,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { FileText, Edit3, Download } from 'lucide-vue-next';
+import { jsPDF } from 'jspdf';
 import api from '../../services/api.js';
 import { addLogoToPdf } from '../../composables/usePdfLogo.js';
 import { useAuthStore } from '../../stores/auth.js';
@@ -266,10 +267,6 @@ const generarPDF = async () => {
   generando.value = true;
   pdfError.value = '';
   try {
-    // Usar dependencia local (el import por CDN falla en el build de Vercel)
-    const mod = await import('jspdf');
-    const jsPDF = mod.jsPDF || mod.default?.jsPDF || mod.default;
-    if (!jsPDF) throw new Error('No se pudo cargar la librería PDF (jspdf).');
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const margen = 20;
