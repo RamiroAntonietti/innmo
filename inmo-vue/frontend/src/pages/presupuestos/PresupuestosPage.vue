@@ -374,7 +374,9 @@ const convertir = async () => {
 
 const descargarPDF = async (p) => {
   try {
-    const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const mod = await import('jspdf');
+    const jsPDF = mod.jsPDF || mod.default?.jsPDF || mod.default;
+    if (!jsPDF) throw new Error('No se pudo cargar la librería PDF (jspdf).');
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const margen = 20;
     const ancho = 210 - margen * 2;

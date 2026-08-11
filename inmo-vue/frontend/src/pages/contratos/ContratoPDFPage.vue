@@ -150,12 +150,21 @@
           </div>
         </div>
 
+        <div
+          v-if="contrato && !contrato.propiedad?.propietario"
+          class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3"
+        >
+          Esta propiedad no tiene propietario asignado. El PDF va a decir “EL LOCADOR”.
+          Editá la propiedad y vinculá un cliente de tipo PROPIETARIO.
+        </div>
+
         <!-- Botón descargar -->
         <button @click="generarPDF" :disabled="generando"
           class="btn-primary w-full flex items-center justify-center gap-2 py-3 text-base">
           <Download :size="18" />
           {{ generando ? 'Generando PDF...' : 'Descargar PDF' }}
         </button>
+        <p v-if="pdfError" class="text-sm text-red-600 bg-red-50 rounded-lg px-4 py-2">{{ pdfError }}</p>
         <p class="text-xs text-gray-400 text-center">El PDF se genera directamente en tu navegador</p>
       </div>
     </div>
@@ -182,6 +191,7 @@ const contratoId = ref('');
 const contrato = ref(null);
 const loadingContrato = ref(false);
 const generando = ref(false);
+const pdfError = ref('');
 
 const doc = ref({
   titulo: 'CONTRATO DE LOCACIÓN',
@@ -196,9 +206,16 @@ const doc = ref({
 });
 
 const fetchContratos = async () => {
-  const { data } = await api.get('/rentals', { params: { limit: 100 } });
-  const d = data.data || data;
-  contratos.value = (d.data || d).filter(c => c.estado === 'ACTIVO');
+  try {
+    const { data } = await api.get('/rentals', { params: { limit: 100 } });
+    const d = data.data || data;
+    const list = Array.isArray(d) ? d : (d.data || []);
+    // Permitir generar PDF de activos, atrasados y finalizados
+    contratos.value = list.filter(c => ['ACTIVO', 'ATRASADO', 'FINALIZADO'].includes(c.estado));
+  } catch (e) {
+    contratos.value = [];
+    console.error(e);
+  }
 };
 
 const cargarContrato = async () => {
@@ -208,10 +225,12 @@ const cargarContrato = async () => {
     const { data } = await api.get(`/rentals/${contratoId.value}`);
     contrato.value = data.data || data;
     rellenarDoc(contrato.value);
-  } catch {
-    // fallback: buscar en la lista
-    contrato.value = contratos.value.find(c => c.id === contratoId.value);
+  } catch (e) {
+    console.error(e);
+    // fallback: buscar en la lista (puede no traer propietario)
+    contrato.value = contratos.value.find(c => c.id === contratoId.value) || null;
     if (contrato.value) rellenarDoc(contrato.value);
+    else alert('No se pudo cargar el contrato. Probá de nuevo.');
   } finally {
     loadingContrato.value = false;
   }
@@ -245,9 +264,12 @@ const rellenarDoc = (c) => {
 
 const generarPDF = async () => {
   generando.value = true;
+  pdfError.value = '';
   try {
-    // Carga jsPDF dinámicamente
-    const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    // Usar dependencia local (el import por CDN falla en el build de Vercel)
+    const mod = await import('jspdf');
+    const jsPDF = mod.jsPDF || mod.default?.jsPDF || mod.default;
+    if (!jsPDF) throw new Error('No se pudo cargar la librería PDF (jspdf).');
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
     const margen = 20;
@@ -356,11 +378,12 @@ const generarPDF = async () => {
     pdf.text('Locador', margen + (mitad - margen - 10) / 2 - pdf.getTextWidth('Locador') / 2, y);
     pdf.text('Locatario', mitad + 10 + (210 - margen - mitad - 10) / 2 - pdf.getTextWidth('Locatario') / 2, y);
 
-    const nombreArchivo = `contrato-${contrato.value?.propiedad?.titulo?.replace(/\s+/g, '-')}-${contrato.value?.inquilino?.apellido}.pdf`;
-    pdf.save(nombreArchivo);
+    const titulo = (contrato.value?.propiedad?.titulo || 'contrato').replace(/\s+/g, '-');
+    const apellido = contrato.value?.inquilino?.apellido || 'inquilino';
+    pdf.save(`contrato-${titulo}-${apellido}.pdf`);
   } catch (e) {
     console.error(e);
-    alert('Error al generar el PDF. Revisá la consola.');
+    pdfError.value = e?.message || 'Error al generar el PDF.';
   } finally {
     generando.value = false;
   }
